@@ -1,3 +1,11 @@
+#include <U8g2lib.h>
+#ifdef U8X8_HAVE_HW_SPI
+#include <SPI.h>
+#endif
+#ifdef U8X8_HAVE_HW_I2C
+#include <Wire.h>
+#endif
+U8G2_SSD1306_128X64_NONAME_F_SW_I2C u8g2(U8G2_R0,A5,A4,U8X8_PIN_NONE);
 
 unsigned long clock,segundos,ultimoclock,segundos1,segundos2;
 int jugador1=0;
@@ -11,9 +19,14 @@ int increment=10;
 
 
 void setup(){
-    //set (temporary) the time control here
-  segundos1=10;
-  segundos2=10;
+  u8g2.begin();
+  u8g2.clearBuffer();
+  u8g2.setFont(u8g2_font_ncenB08_tr);
+  u8g2.drawStr(5,10,"INIT");
+  u8g2.sendBuffer();
+  //set (temporary) the time control here
+  segundos1=1000;
+  segundos2=1000;
   //---
   Serial.begin(9600);
   ultimoclock=0;
@@ -45,7 +58,15 @@ void loop(){
     ultimoclock=clock;
     if (player=0){
       segundos1--;
-      Serial.println(String(segundos1)+" | "+String(moves1)+" < "+String(moves2)+" | "+String(segundos2));
+      //Serial.println(String(segundos1)+" | "+String(moves1)+" < "+String(moves2)+" | "+String(segundos2));
+      u8g2.clearBuffer();
+      u8g2.setFont(u8g2_font_ncenB08_tr);
+      u8g2.drawStr(5,10,"Player 1:"+String(segundos1));
+      u8g2.drawStr(5,20,"Moves:"+String(moves1));
+      u8g2.drawStr(5,30,"<");
+      u8g2.drawStr(5,40,"Player 2:"+String(segundos2));
+      u8g2.drawStr(5,50,"Moves:"+String(moves2));
+      u8g2.sendBuffer();
       digitalWrite(11, HIGH);
       digitalWrite(12, LOW); 
       //flag fall handling 
@@ -57,7 +78,15 @@ void loop(){
     }
     else{
       segundos1--;
-      Serial.println(String(segundos1)+" | "+String(moves1)+" > "+String(moves2)+" | "+String(segundos2));
+      //Serial.println(String(segundos1)+" | "+String(moves1)+" > "+String(moves2)+" | "+String(segundos2));
+      u8g2.clearBuffer();
+      u8g2.setFont(u8g2_font_ncenB08_tr);
+      u8g2.drawStr(5,10,"Player 1:"+String(segundos1));
+      u8g2.drawStr(5,20,"Moves:"+String(moves1));
+      u8g2.drawStr(5,30,">");
+      u8g2.drawStr(5,40,"Player 2:"+String(segundos2));
+      u8g2.drawStr(5,50,"Moves:"+String(moves2));
+      u8g2.sendBuffer();
       digitalWrite(12, HIGH);
       digitalWrite(11, LOW);  
       //flag fall handling
