@@ -5,7 +5,8 @@
 #ifdef U8X8_HAVE_HW_I2C
 #include <Wire.h>
 #endif
-U8G2_SSD1306_128X64_NONAME_F_SW_I2C u8g2(U8G2_R0,A5,A4,U8X8_PIN_NONE);
+U8G2_SSD1306_128X64_NONAME_F_SW_I2C OLED1(U8G2_R0,A5,A4,U8X8_PIN_NONE);
+U8G2_SSD1306_128X64_NONAME_F_SW_I2C OLED2(U8G2_R0,A3,A2,U8X8_PIN_NONE);
 
 unsigned long clock,segundos,ultimoclock,segundos1,segundos2;
 int jugador1=0;
@@ -19,11 +20,15 @@ int increment=10;
 
 
 void setup(){
-  u8g2.begin();
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_ncenB08_tr);
-  u8g2.drawStr(5,10,"INIT");
-  u8g2.sendBuffer();
+  OLED1.begin();
+  OLED2.begin();
+  //u8g2_font_fub35_tf
+  OLED1.setFont(u8g2_font_ncenB08_tr);
+  OLED1.drawStr(50,35,"INIT 1");
+  OLED1.sendBuffer();
+  OLED2.setFont(u8g2_font_ncenB08_tr);
+  OLED2.drawStr(50,35,"INIT 2");
+  OLED2.sendBuffer();
   //set (temporary) the time control here
   segundos1=1000;
   segundos2=1000;
@@ -36,11 +41,17 @@ void setup(){
   pinMode(9, OUTPUT);
   pinMode(2, INPUT_PULLUP);
   pinMode(3, INPUT_PULLUP);
+  delay(250);
+  OLED1.clearBuffer();
+  OLED2.clearBuffer();
 }
 
 void loop(){
-  
-  clock = millis();
+  /*OLED1.drawStr(20,35,"DU1 INIT failed!");
+  OLED2.drawStr(20,35,"DU2 INIT failed!");
+  OLED1.sendBuffer();
+  OLED2.sendBuffer();
+  clock = millis();*/
   segundos = clock/1000;
 
   //AIP'd
@@ -59,14 +70,29 @@ void loop(){
     if (player=0){
       segundos1--;
       //Serial.println(String(segundos1)+" | "+String(moves1)+" < "+String(moves2)+" | "+String(segundos2));
-      u8g2.clearBuffer();
-      u8g2.setFont(u8g2_font_ncenB08_tr);
-      u8g2.drawStr(5,10,"Player 1:"+String(segundos1));
-      u8g2.drawStr(5,20,"Moves:"+String(moves1));
+      //u8g2.clearBuffer();
+/*      OLED1.setFont(u8g2_font_ncenB08_tr);
+     
+       String objetoString=String("Player 1:"+String(segundos1));
+  int tamanyoObjetoString=objetoString.length()+1;
+  char texto_nativo[tamanyoObjetoString];
+  objetoString.toCharArray(texto_nativo, tamanyoObjetoString);
+  OLED1.drawStr(5,10,texto_nativo); */
+
+//      u8g2.drawStr(5,10,("Player 1:"+String(segundos1)));
+/*      u8g2.drawStr(5,20,("Moves:"+String(moves1)));
       u8g2.drawStr(5,30,"<");
-      u8g2.drawStr(5,40,"Player 2:"+String(segundos2));
-      u8g2.drawStr(5,50,"Moves:"+String(moves2));
-      u8g2.sendBuffer();
+      u8g2.drawStr(5,40,("Player 2:"+String(segundos2)));
+      u8g2.drawStr(5,50,("Moves:"+String(moves2)));
+      u8g2.sendBuffer(); */
+      OLED1.clearBuffer();
+      OLED2.clearBuffer();
+      OLED1.drawStr(5,10,"Moves: XX");
+      OLED1.drawStr(35,35,"XX:XX:XX.X");
+      OLED1.sendBuffer();
+      OLED2.drawStr(5,10,"Moves: XX");
+      OLED2.drawStr(35,35,"XX:XX:XX.X");
+      OLED2.sendBuffer();
       digitalWrite(11, HIGH);
       digitalWrite(12, LOW); 
       //flag fall handling 
@@ -77,18 +103,26 @@ void loop(){
     }
     }
     else{
-      segundos1--;
+      segundos2--;
       //Serial.println(String(segundos1)+" | "+String(moves1)+" > "+String(moves2)+" | "+String(segundos2));
-      u8g2.clearBuffer();
-      u8g2.setFont(u8g2_font_ncenB08_tr);
-      u8g2.drawStr(5,10,"Player 1:"+String(segundos1));
-      u8g2.drawStr(5,20,"Moves:"+String(moves1));
+      //u8g2.clearBuffer();
+      /*u8g2.setFont(u8g2_font_ncenB08_tr);
+      u8g2.drawStr(5,10,("Player 1:"+String(segundos1)));
+      u8g2.drawStr(5,20,("Moves:"+String(moves1)));
       u8g2.drawStr(5,30,">");
-      u8g2.drawStr(5,40,"Player 2:"+String(segundos2));
-      u8g2.drawStr(5,50,"Moves:"+String(moves2));
-      u8g2.sendBuffer();
+      u8g2.drawStr(5,40,("Player 2:"+String(segundos2)));
+      u8g2.drawStr(5,50,("Moves:"+String(moves2)));
+      u8g2.sendBuffer();*/
+      OLED1.clearBuffer();
+      OLED2.clearBuffer();
+      OLED1.drawStr(5,10,"Moves: XX");
+      OLED1.drawStr(35,35,"XX:XX:XX.X");
+      OLED1.sendBuffer();
+      OLED2.drawStr(5,10,"Moves: XX");
+      OLED2.drawStr(35,35,"XX:XX:XX.X");
+      OLED2.sendBuffer();
       digitalWrite(12, HIGH);
-      digitalWrite(11, LOW);  
+      digitalWrite(11, LOW);    
       //flag fall handling
       if (segundos2<1);{
         while (segundos2<1){
@@ -115,74 +149,5 @@ void loop(){
       }
     moves2++;
     }
-/*        if(player==0){
-      moves1++;
-      segundos1--;
-      Serial.println(String(segundos1)+" | "+String(moves1)+" < "+String(moves2)+" | "+String(segundos2));
-      digitalWrite(11, HIGH);
-      digitalWrite(12, LOW); 
-      //flag fall handling 
-        if (segundos1<1);{
-          digitalWrite(9, HIGH);
-          digitalWrite(11, LOW);
-          delay(2000);
-      }
-    }
-    else{
-      segundos2--;
-      moves2++;
-      Serial.println(String(segundos1)+" | "+String(moves1)+" > "+String(moves2)+" | "+String(segundos2));
-      digitalWrite(12, HIGH);
-      digitalWrite(11, LOW);  
-      //flag fall handling
-      if (segundos2<1);{
-        while (segundos2<1){
-          digitalWrite(10, HIGH);
-          digitalWrite(12, LOW);
-          delay(2000);
-        }
-      }
-    }
-    /*if(balancinstat == HIGH){
-      while(balancinstat == HIGH){
-        delay(1000);
-      }*/
   }
 }
-
-/*void balancin(int player){
-      if(player==0){
-        while
-      moves1++;
-      segundos1--;
-      Serial.println(String(segundos1)+" | "+String(moves1)+" < "+String(moves2)+" | "+String(segundos2));
-      digitalWrite(11, HIGH);
-      digitalWrite(12, LOW); 
-      //flag fall handling 
-        if (segundos1<1);{
-          digitalWrite(9, HIGH);
-          digitalWrite(11, LOW);
-          delay(2000);
-      }
-    }
-    else{
-      segundos2--;
-      moves2++;
-      Serial.println(String(segundos1)+" | "+String(moves1)+" > "+String(moves2)+" | "+String(segundos2));
-      digitalWrite(12, HIGH);
-      digitalWrite(11, LOW);  
-      //flag fall handling
-      if (segundos2<1);{
-        while (segundos2<1){
-          digitalWrite(10, HIGH);
-          digitalWrite(12, LOW);
-          delay(2000);
-        }
-      }
-    }
-    if(balancinstat == HIGH){
-      while(balancinstat == HIGH){
-        delay(1000);
-      }
-    }
-}*/  

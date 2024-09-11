@@ -12,12 +12,20 @@ U8G2_SSD1306_128X64_NONAME_F_SW_I2C u8g2(U8G2_R0,A5,A4,U8X8_PIN_NONE);
 
 void setup(void) {
   u8g2.begin();
+
 }
+
 
 void loop(void) {
   u8g2.clearBuffer();
   u8g2.setFont(u8g2_font_ncenB08_tr);
-  u8g2.drawStr(5,10,"ideaspark 0.96'' OLED");
+
+  String objetoString=String("ideaspark 0.96'' OLED");
+  int tamanyoObjetoString=objetoString.length()+1;
+  char texto_nativo[tamanyoObjetoString];
+  objetoString.toCharArray(texto_nativo, tamanyoObjetoString);
+  u8g2.drawStr(5,10,texto_nativo);
+
   u8g2.drawStr(5,25,"0.96");
   u8g2.drawStr(5,35,"0.96 inch");
   u8g2.drawStr(5,45,"0.96 inch OLED");
