@@ -1,12 +1,33 @@
-#include <U8g2lib.h>
-#ifdef U8X8_HAVE_HW_SPI
 #include <SPI.h>
-#endif
-#ifdef U8X8_HAVE_HW_I2C
 #include <Wire.h>
-#endif
-U8G2_SSD1306_128X64_NONAME_F_SW_I2C OLED1(U8G2_R0,A5,A4,U8X8_PIN_NONE);
-U8G2_SSD1306_128X64_NONAME_F_SW_I2C OLED2(U8G2_R0,A3,A2,U8X8_PIN_NONE);
+#include <ss_oled.h>
+//U8G2_SSD1306_128X64_NONAME_F_SW_I2C OLED1(U8G2_R0,A5,A4,U8X8_PIN_NONE);
+//U8G2_SSD1306_128X64_NONAME_F_SW_I2C OLED2(U8G2_R0,A3,A2,U8X8_PIN_NONE);
+
+#define GROVE_SDA_PIN A2
+#define GROVE_SCL_PIN A3
+// These are the pin numbers for the M5Stack Atom default I2C
+#define SDA_PIN A4
+#define SCL_PIN A5
+// Set this to -1 to disable or the GPIO pin number connected to the reset
+// line of your display if it requires an external reset
+#define RESET_PIN -1
+// let ss_oled figure out the display address
+#define OLED_ADDR -1
+// don't rotate the display
+#define FLIP180 0
+// don't invert the display
+#define INVERT 0
+// Bit-Bang the I2C bus
+#define USE_HW_I2C 0
+
+// Change these if you're using different OLED displays
+#define MY_OLED1 OLED_128x64
+#define MY_OLED2 OLED_128x64
+
+// 2 copies of the SSOLED structure. Each structure is about 56 bytes
+// There is no limit to the number of simultaneous displays which can be controlled by ss_oled 
+SSOLED ssoled[2];
 
 unsigned long clock,segundos,ultimoclock,segundos1,segundos2;
 int jugador1=0;
@@ -20,15 +41,6 @@ int increment=10;
 
 
 void setup(){
-  OLED1.begin();
-  OLED2.begin();
-  //u8g2_font_fub35_tf
-  OLED1.setFont(u8g2_font_ncenB08_tr);
-  OLED1.drawStr(50,35,"INIT 1");
-  OLED1.sendBuffer();
-  OLED2.setFont(u8g2_font_ncenB08_tr);
-  OLED2.drawStr(50,35,"INIT 2");
-  OLED2.sendBuffer();
   //set (temporary) the time control here
   segundos1=1000;
   segundos2=1000;
@@ -41,17 +53,11 @@ void setup(){
   pinMode(9, OUTPUT);
   pinMode(2, INPUT_PULLUP);
   pinMode(3, INPUT_PULLUP);
-  delay(250);
-  OLED1.clearBuffer();
-  OLED2.clearBuffer();
 }
 
 void loop(){
-  /*OLED1.drawStr(20,35,"DU1 INIT failed!");
-  OLED2.drawStr(20,35,"DU2 INIT failed!");
-  OLED1.sendBuffer();
-  OLED2.sendBuffer();
-  clock = millis();*/
+
+  clock = millis();
   segundos = clock/1000;
 
   //AIP'd
@@ -70,29 +76,6 @@ void loop(){
     if (player=0){
       segundos1--;
       //Serial.println(String(segundos1)+" | "+String(moves1)+" < "+String(moves2)+" | "+String(segundos2));
-      //u8g2.clearBuffer();
-/*      OLED1.setFont(u8g2_font_ncenB08_tr);
-     
-       String objetoString=String("Player 1:"+String(segundos1));
-  int tamanyoObjetoString=objetoString.length()+1;
-  char texto_nativo[tamanyoObjetoString];
-  objetoString.toCharArray(texto_nativo, tamanyoObjetoString);
-  OLED1.drawStr(5,10,texto_nativo); */
-
-//      u8g2.drawStr(5,10,("Player 1:"+String(segundos1)));
-/*      u8g2.drawStr(5,20,("Moves:"+String(moves1)));
-      u8g2.drawStr(5,30,"<");
-      u8g2.drawStr(5,40,("Player 2:"+String(segundos2)));
-      u8g2.drawStr(5,50,("Moves:"+String(moves2)));
-      u8g2.sendBuffer(); */
-      OLED1.clearBuffer();
-      OLED2.clearBuffer();
-      OLED1.drawStr(5,10,"Moves: XX");
-      OLED1.drawStr(35,35,"XX:XX:XX.X");
-      OLED1.sendBuffer();
-      OLED2.drawStr(5,10,"Moves: XX");
-      OLED2.drawStr(35,35,"XX:XX:XX.X");
-      OLED2.sendBuffer();
       digitalWrite(11, HIGH);
       digitalWrite(12, LOW); 
       //flag fall handling 
@@ -105,22 +88,6 @@ void loop(){
     else{
       segundos2--;
       //Serial.println(String(segundos1)+" | "+String(moves1)+" > "+String(moves2)+" | "+String(segundos2));
-      //u8g2.clearBuffer();
-      /*u8g2.setFont(u8g2_font_ncenB08_tr);
-      u8g2.drawStr(5,10,("Player 1:"+String(segundos1)));
-      u8g2.drawStr(5,20,("Moves:"+String(moves1)));
-      u8g2.drawStr(5,30,">");
-      u8g2.drawStr(5,40,("Player 2:"+String(segundos2)));
-      u8g2.drawStr(5,50,("Moves:"+String(moves2)));
-      u8g2.sendBuffer();*/
-      OLED1.clearBuffer();
-      OLED2.clearBuffer();
-      OLED1.drawStr(5,10,"Moves: XX");
-      OLED1.drawStr(35,35,"XX:XX:XX.X");
-      OLED1.sendBuffer();
-      OLED2.drawStr(5,10,"Moves: XX");
-      OLED2.drawStr(35,35,"XX:XX:XX.X");
-      OLED2.sendBuffer();
       digitalWrite(12, HIGH);
       digitalWrite(11, LOW);    
       //flag fall handling
