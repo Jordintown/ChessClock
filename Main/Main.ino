@@ -41,9 +41,19 @@ int increment=10;
 
 
 void setup(){
+  char *msgs[] = {(char *)"SSD1306 @ 0x3C", (char *)"SSD1306 @ 0x3D",(char *)"SH1106 @ 0x3C",(char *)"SH1106 @ 0x3D"};
+  int rc;
+  rc = oledInit(&ssoled[0], MY_OLED1, OLED_ADDR, FLIP180, INVERT, 1, SDA_PIN, SCL_PIN, RESET_PIN, 400000L);
+  rc = oledInit(&ssoled[1], MY_OLED2, OLED_ADDR, FLIP180, INVERT, 0, GROVE_SDA_PIN, GROVE_SCL_PIN, RESET_PIN, 400000L);
+  oledFill(&ssoled[0], 0, 1);
+  oledWriteString(&ssoled[0], 0,0,0,(char *)"DME Chess Clock", FONT_NORMAL, 0, 1);
+  oledWriteString(&ssoled[0], 0,10,3,(char *)"INIT", FONT_STRETCHED, 0, 1);
+  oledFill(&ssoled[1], 0, 1);
+  oledWriteString(&ssoled[1], 0,60,0,(char *)"v0.0.0A", FONT_NORMAL, 0, 1);
+  oledWriteString(&ssoled[1], 0,10,3,(char *)"INIT", FONT_STRETCHED, 0, 1);
   //set (temporary) the time control here
-  segundos1=1000;
-  segundos2=1000;
+  segundos1=600;
+  segundos2=600;
   //---
   Serial.begin(9600);
   ultimoclock=0;
@@ -53,10 +63,11 @@ void setup(){
   pinMode(9, OUTPUT);
   pinMode(2, INPUT_PULLUP);
   pinMode(3, INPUT_PULLUP);
+  oledFill(&ssoled[0], 0, 1);
+  oledFill(&ssoled[1], 0, 1);
 }
 
 void loop(){
-
   clock = millis();
   segundos = clock/1000;
 
@@ -77,7 +88,19 @@ void loop(){
       segundos1--;
       //Serial.println(String(segundos1)+" | "+String(moves1)+" < "+String(moves2)+" | "+String(segundos2));
       digitalWrite(11, HIGH);
-      digitalWrite(12, LOW); 
+      digitalWrite(12, LOW);
+
+      oledWriteString(&ssoled[0], 0,0,0,(char *)"Moves: 0", FONT_NORMAL, 0, 1);
+      oledWriteString(&ssoled[0], 0,85,0,(char *)"min/sec", FONT_SMALL, 0, 1);
+      oledWriteString(&ssoled[0], 0,20,3,(char *)"00:00", FONT_STRETCHED, 0, 1);
+      oledWriteString(&ssoled[0], 0,0,7,(char *)"bonus", FONT_SMALL, 0, 1);
+      oledWriteString(&ssoled[0], 0,90,7,(char *)"", FONT_NORMAL, 0, 1);
+      //--
+      oledWriteString(&ssoled[1], 0,60,0,(char *)"Moves: 0", FONT_NORMAL, 0, 1);
+      oledWriteString(&ssoled[1], 0,0,0,(char *)"min/sec", FONT_SMALL, 0, 1);
+      oledWriteString(&ssoled[1], 0,20,3,(char *)"00:00", FONT_STRETCHED, 0, 1);
+      oledWriteString(&ssoled[1], 0,90,7,(char *)"bonus", FONT_SMALL, 0, 1);
+      oledWriteString(&ssoled[1], 0,0,7,(char *)"Play", FONT_NORMAL, 0, 1);
       //flag fall handling 
         if (segundos1<1);{
         digitalWrite(9, HIGH);
@@ -88,6 +111,17 @@ void loop(){
     else{
       segundos2--;
       //Serial.println(String(segundos1)+" | "+String(moves1)+" > "+String(moves2)+" | "+String(segundos2));
+      oledWriteString(&ssoled[0], 0,0,0,(char *)"Moves: 0", FONT_NORMAL, 0, 1);
+      oledWriteString(&ssoled[0], 0,85,0,(char *)"min/sec", FONT_SMALL, 0, 1);
+      oledWriteString(&ssoled[0], 0,20,3,(char *)"00:00", FONT_STRETCHED, 0, 1);
+      oledWriteString(&ssoled[0], 0,0,7,(char *)"bonus", FONT_SMALL, 0, 1);
+      oledWriteString(&ssoled[0], 0,90,7,(char *)"Play", FONT_NORMAL, 0, 1);
+      //--
+      oledWriteString(&ssoled[1], 0,60,0,(char *)"Moves: 0", FONT_NORMAL, 0, 1);
+      oledWriteString(&ssoled[1], 0,0,0,(char *)"min/sec", FONT_SMALL, 0, 1);
+      oledWriteString(&ssoled[1], 0,20,3,(char *)"00:00", FONT_STRETCHED, 0, 1);
+      oledWriteString(&ssoled[1], 0,90,7,(char *)"bonus", FONT_SMALL, 0, 1);
+      oledWriteString(&ssoled[1], 0,0,7,(char *)"", FONT_NORMAL, 0, 1);
       digitalWrite(12, HIGH);
       digitalWrite(11, LOW);    
       //flag fall handling
