@@ -52,8 +52,8 @@ void setup(){
   oledWriteString(&ssoled[1], 0,60,0,(char *)"v0.0.0A", FONT_NORMAL, 0, 1);
   oledWriteString(&ssoled[1], 0,10,3,(char *)"INIT", FONT_STRETCHED, 0, 1);
   //set (temporary) the time control here
-  segundos1=600;
-  segundos2=600;
+  segundos1=10;
+  segundos2=10;
   //---
   Serial.begin(9600);
   ultimoclock=0;
@@ -103,9 +103,12 @@ void loop(){
       oledWriteString(&ssoled[1], 0,0,7,(char *)"Play", FONT_NORMAL, 0, 1);
       //flag fall handling 
         if (segundos1<1);{
-        digitalWrite(9, HIGH);
-        digitalWrite(11, LOW);
-        delay(2000);
+          while (segundos1<1);{
+          digitalWrite(9, HIGH);
+          digitalWrite(11, LOW);
+          delay(500);
+          }
+
     }
     }
     else{
@@ -125,12 +128,12 @@ void loop(){
       digitalWrite(12, HIGH);
       digitalWrite(11, LOW);    
       //flag fall handling
-      if (segundos2<1);{
-        while (segundos2<1){
+        if (segundos2<1);{
+          while (segundos2<1);{
           digitalWrite(10, HIGH);
           digitalWrite(12, LOW);
-          delay(2000);
-        }
+          delay(500);
+          }
     }
   }
 
@@ -152,3 +155,4 @@ void loop(){
     }
   }
 }
+
