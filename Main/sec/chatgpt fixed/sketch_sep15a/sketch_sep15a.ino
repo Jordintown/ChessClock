@@ -17,20 +17,23 @@
 SSOLED ssoled[2];
 
 unsigned long clock, segundos, ultimoclock;
-unsigned long segundos1 = 10, segundos2 = 10;
-int jugador1 = 0;
+unsigned long segundos1 = 600;  // 10 minutos en segundos
+unsigned long segundos2 = 600;  // 10 minutos en segundos
 int moves1 = 0, moves2 = 0;
 byte balancinstat, balancinstat2;
 int player = 0;
+bool boton1Presionado = false;
+bool boton2Presionado = false;
 
 void setup() {
-  char *msgs[] = {(char *)"SSD1306 @ 0x3C", (char *)"SSD1306 @ 0x3D"};
   int rc;
   rc = oledInit(&ssoled[0], MY_OLED1, OLED_ADDR, FLIP180, INVERT, 1, SDA_PIN, SCL_PIN, RESET_PIN, 400000L);
   rc = oledInit(&ssoled[1], MY_OLED2, OLED_ADDR, FLIP180, INVERT, 0, GROVE_SDA_PIN, GROVE_SCL_PIN, RESET_PIN, 400000L);
+  
   oledFill(&ssoled[0], 0, 1);
   oledWriteString(&ssoled[0], 0, 0, 0, (char *)"DME Chess Clock", FONT_NORMAL, 0, 1);
   oledWriteString(&ssoled[0], 0, 10, 3, (char *)"INIT", FONT_STRETCHED, 0, 1);
+  
   oledFill(&ssoled[1], 0, 1);
   oledWriteString(&ssoled[1], 0, 60, 0, (char *)"v0.0.0A", FONT_NORMAL, 0, 1);
   oledWriteString(&ssoled[1], 0, 10, 3, (char *)"INIT", FONT_STRETCHED, 0, 1);
@@ -44,9 +47,18 @@ void setup() {
   pinMode(9, OUTPUT);
   pinMode(2, INPUT_PULLUP);
   pinMode(3, INPUT_PULLUP);
-
+  
   oledFill(&ssoled[0], 0, 1);
   oledFill(&ssoled[1], 0, 1);
+}
+
+// Función para convertir segundos a MM:SS
+void mostrarTiempoRestante(SSOLED *oled, unsigned long segundosRestantes) {
+  char buffer[6];
+  int minutos = segundosRestantes / 60;
+  int segundos = segundosRestantes % 60;
+  sprintf(buffer, "%02d:%02d", minutos, segundos);
+  oledWriteString(oled, 0, 20, 3, buffer, FONT_STRETCHED, 0, 1);
 }
 
 void loop() {
@@ -63,11 +75,10 @@ void loop() {
 
       oledWriteString(&ssoled[0], 0, 0, 0, (char *)"Moves: 0", FONT_NORMAL, 0, 1);
       oledWriteString(&ssoled[0], 0, 85, 0, (char *)"min/sec", FONT_SMALL, 0, 1);
-      oledWriteString(&ssoled[0], 0, 20, 3, (char *)"00:00", FONT_STRETCHED, 0, 1);
+      mostrarTiempoRestante(&ssoled[0], segundos1);
 
-      // Manejar el tiempo agotado
       if (segundos1 < 1) {
-        digitalWrite(10, HIGH);
+        digitalWrite(9, HIGH);
         delay(500);
       }
 
@@ -78,9 +89,8 @@ void loop() {
 
       oledWriteString(&ssoled[1], 0, 0, 0, (char *)"Moves: 0", FONT_NORMAL, 0, 1);
       oledWriteString(&ssoled[1], 0, 85, 0, (char *)"min/sec", FONT_SMALL, 0, 1);
-      oledWriteString(&ssoled[1], 0, 20, 3, (char *)"00:00", FONT_STRETCHED, 0, 1);
+      mostrarTiempoRestante(&ssoled[1], segundos2);
 
-      // Manejar el tiempo agotado
       if (segundos2 < 1) {
         digitalWrite(10, HIGH);
         delay(500);
@@ -88,29 +98,27 @@ void loop() {
     }
   }
 
-  // Detectar cambio de jugador
-  balancinstat = digitalRead(2);
-  balancinstat2 = digitalRead(3);
-
-  if (balancinstat == LOW) {  // Botón del Jugador 1 presionado
-    player = 1; // Cambia al Jugador 2
+  // Detectar el botón del Jugador 1
+  if (digitalRead(2) == LOW && !boton1Presionado) {
+    player = 1;  // Cambia al Jugador 2
     moves1++;
+    boton1Presionado = true;
     Serial.println("Cambio a Jugador 2");
-
-    // Espera hasta que el botón se suelte
-    while (digitalRead(2) == LOW) {
-      // Aquí puedes realizar otras tareas si es necesario
-    }
+  }
+  
+  if (digitalRead(2) == HIGH) {
+    boton1Presionado = false;
   }
 
-  if (balancinstat2 == LOW) {  // Botón del Jugador 2 presionado
-    player = 0; // Cambia al Jugador 1
+  // Detectar el botón del Jugador 2
+  if (digitalRead(3) == LOW && !boton2Presionado) {
+    player = 0;  // Cambia al Jugador 1
     moves2++;
+    boton2Presionado = true;
     Serial.println("Cambio a Jugador 1");
-
-    // Espera hasta que el botón se suelte
-    while (digitalRead(3) == LOW) {
-      // Aquí puedes realizar otras tareas si es necesario
-    }
+  }
+  
+  if (digitalRead(3) == HIGH) {
+    boton2Presionado = false;
   }
 }
