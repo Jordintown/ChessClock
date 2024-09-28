@@ -25,6 +25,7 @@ byte balancinstat, balancinstat2;
 int player = 0;
 bool boton1Presionado = false;
 bool boton2Presionado = false;
+bool pause = true;
 
 void setup() {
   int rc;
@@ -48,6 +49,9 @@ void setup() {
   pinMode(9, OUTPUT);
   pinMode(2, INPUT_PULLUP);
   pinMode(3, INPUT_PULLUP);
+  pinMode(4, INPUT_PULLUP);
+  pinMode(5, INPUT_PULLUP);
+  pinMode(6, INPUT_PULLUP);
   
   oledFill(&ssoled[0], 0, 1);
   oledFill(&ssoled[1], 0, 1);
@@ -84,7 +88,7 @@ void mostrarTextoSuperior(SSOLED *oled, unsigned long segundosRestantes) {
 
 // Función para mostrar "Bonus" en la parte inferior izquierda de la pantalla
 void mostrarBonus(SSOLED *oled) {
-  oledWriteString(oled, 0, 0, 7, (char *)"Bonus", FONT_SMALL, 0, 1);  // Mostrar "Bonus" en la esquina inferior izquierda
+  //oledWriteString(oled, 0, 0, 7, (char *)"Bonus", FONT_SMALL, 0, 1);  // Mostrar "Bonus" en la esquina inferior izquierda
 }
 
 // Función para mostrar movimientos
@@ -103,10 +107,12 @@ void loop() {
 
     if (player == 0) {  // Jugador 1
       if (segundos1 > 0) {
-        segundos1--;
+        if (pause == false){
+          segundos1--;
+        }
       }
-      digitalWrite(11, HIGH);
-      digitalWrite(12, LOW);
+      digitalWrite(12, HIGH);
+      digitalWrite(11, LOW);
 
       mostrarTextoSuperior(&ssoled[0], segundos1);  // Mostrar hr/min o min/sec
       mostrarTiempoRestante(&ssoled[0], segundos1);  // Mostrar tiempo restante
@@ -120,10 +126,12 @@ void loop() {
 
     } else {  // Jugador 2
       if (segundos2 > 0) {
-        segundos2--;
+        if (pause == false){
+          segundos2--;
+        }
       }
-      digitalWrite(12, HIGH);
-      digitalWrite(11, LOW);
+      digitalWrite(11, HIGH);
+      digitalWrite(12, LOW);
 
       mostrarTextoSuperior(&ssoled[1], segundos2);  // Mostrar hr/min o min/sec
       mostrarTiempoRestante(&ssoled[1], segundos2);  // Mostrar tiempo restante
@@ -161,5 +169,17 @@ void loop() {
   
   if (digitalRead(3) == HIGH) {
     boton2Presionado = false;
+  }
+
+  if (digitalRead(5) == HIGH) {
+    if (pause == true){
+      pause = false;
+      oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Play", FONT_NORMAL, 0, 1);
+    }
+    else
+    {
+      pause = true;
+      oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Pause", FONT_NORMAL, 0, 1);
+    }
   }
 }
