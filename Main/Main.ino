@@ -101,7 +101,12 @@ void mostrarMovimientos(SSOLED *oled, int movimientos) {
 void loop() {
   clock = millis();
   segundos = clock / 1000;
-
+  /*if (pause == true){
+    oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Pause", FONT_NORMAL, 0, 1);
+  }
+  else{
+    oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Play", FONT_NORMAL, 0, 1);
+  }*/
   if (clock > (ultimoclock + 999)) {
     ultimoclock = clock;
 
@@ -174,12 +179,12 @@ void loop() {
   if (digitalRead(5) == HIGH) {
     if (pause == true){
       pause = false;
-      oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Play", FONT_NORMAL, 0, 1);
+      //oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Play", FONT_NORMAL, 0, 1);
     }
     else
     {
       pause = true;
-      oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Pause", FONT_NORMAL, 0, 1);
+      //oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Pause", FONT_NORMAL, 0, 1);
     }
   }
 }

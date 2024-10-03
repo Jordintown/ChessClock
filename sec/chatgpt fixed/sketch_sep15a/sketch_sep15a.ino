@@ -17,9 +17,9 @@
 SSOLED ssoled[2];
 
 unsigned long clock, segundos, ultimoclock;
-unsigned long segundos1 = 7200;  // 2 horas en segundos
-unsigned long segundos2 = 7200;  // 2 horas en segundos
-const unsigned long bonus = 10; // Bonus de 10 segundos por movimiento
+unsigned long segundos1 = 600;  // 2 horas en segundos
+unsigned long segundos2 = 600;  // 2 horas en segundos
+const unsigned long bonus = 0; // Bonus de 10 segundos por movimiento
 int moves1 = 0, moves2 = 0;     // Contadores de movimientos
 int player = 0;
 bool boton1Presionado = false;
@@ -33,13 +33,16 @@ void setup() {
   oledFill(&ssoled[0], 0, 1);
   oledWriteString(&ssoled[0], 0, 0, 0, (char *)"DME Chess Clock", FONT_NORMAL, 0, 1);
   oledWriteString(&ssoled[0], 0, 10, 3, (char *)"INIT", FONT_STRETCHED, 0, 1);
-  
   oledFill(&ssoled[1], 0, 1);
+  oledWriteString(&ssoled[1], 0, 0, 0, (char *)"INT 1", FONT_NORMAL, 0, 1);
+  oledWriteString(&ssoled[1], 0, 10, 3, (char *)"INIT", FONT_STRETCHED, 0, 1);
+  
+  /*oledFill(&ssoled[1], 0, 1);
   mostrarTextoSuperior(&ssoled[1], segundos2);  // Mostrar hr/min o min/sec
   mostrarTiempoRestante(&ssoled[1], segundos2);  // Mostrar tiempo restante
   mostrarBonus(&ssoled[1]);  // Mostrar "Bonus" en la pantalla del Jugador 2
   mostrarMovimientos(&ssoled[1], moves2);  // Mostrar movimientos del Jugador 2 (inicialmente 0)
-  oledWriteString(&ssoled[1], 0, 0, 0, (char *)"Moves: 0", FONT_NORMAL, 0, 1);
+  oledWriteString(&ssoled[1], 0, 0, 0, (char *)"Moves: 0", FONT_NORMAL, 0, 1);*/
   
   Serial.begin(9600);
   ultimoclock = 0;
@@ -51,6 +54,7 @@ void setup() {
   pinMode(2, INPUT_PULLUP);
   pinMode(3, INPUT_PULLUP);
   
+  delay(2000);
   oledFill(&ssoled[0], 0, 1);
   oledFill(&ssoled[1], 0, 1);
 }
@@ -93,7 +97,7 @@ void mostrarMovimientos(SSOLED *oled, int movimientos) {
 
 // Función para mostrar "Play" en la pantalla del jugador activo
 void mostrarPlay(SSOLED *oled) {
-  oledWriteString(oled, 40, 50, 0, (char *)"Play", FONT_NORMAL, 0, 1);  // Mostrar "Play" en el centro inferior
+  oledWriteString(oled, 0, 88, 7, (char *)"Play", FONT_NORMAL, 0, 1);  // Mostrar "Play" en el centro inferior
 }
 
 void loop() {
@@ -110,14 +114,14 @@ void loop() {
       digitalWrite(11, HIGH);
       digitalWrite(12, LOW);
 
-      oledFill(&ssoled[0], 0, 1);  // Limpiar pantalla
+      //oledFill(&ssoled[0], 0, 1);  // Limpiar pantalla
       mostrarTextoSuperior(&ssoled[0], segundos1);  // Mostrar hr/min o min/sec
       mostrarTiempoRestante(&ssoled[0], segundos1);  // Mostrar tiempo restante
       mostrarBonus(&ssoled[0]);  // Mostrar "Bonus" en la pantalla del Jugador 1
       mostrarMovimientos(&ssoled[0], moves1);  // Mostrar movimientos del Jugador 1
       mostrarPlay(&ssoled[0]);  // Mostrar "Play" en la pantalla del Jugador 1
 
-      oledFill(&ssoled[1], 0, 1);  // Limpiar pantalla del Jugador 2
+      //oledFill(&ssoled[1], 0, 1);  // Limpiar pantalla del Jugador 2
       mostrarTextoSuperior(&ssoled[1], segundos2);  // Actualizar hr/min o min/sec en la pantalla del Jugador 2
       mostrarTiempoRestante(&ssoled[1], segundos2);  // Actualizar tiempo restante en la pantalla del Jugador 2
       mostrarBonus(&ssoled[1]);  // Mostrar "Bonus" en la pantalla del Jugador 2
@@ -135,14 +139,14 @@ void loop() {
       digitalWrite(12, HIGH);
       digitalWrite(11, LOW);
 
-      oledFill(&ssoled[1], 0, 1);  // Limpiar pantalla
+      //oledFill(&ssoled[1], 0, 1);  // Limpiar pantalla
       mostrarTextoSuperior(&ssoled[1], segundos2);  // Mostrar hr/min o min/sec
       mostrarTiempoRestante(&ssoled[1], segundos2);  // Mostrar tiempo restante
       mostrarBonus(&ssoled[1]);  // Mostrar "Bonus" en la pantalla del Jugador 2
       mostrarMovimientos(&ssoled[1], moves2);  // Mostrar movimientos del Jugador 2
       mostrarPlay(&ssoled[1]);  // Mostrar "Play" en la pantalla del Jugador 2
 
-      oledFill(&ssoled[0], 0, 1);  // Limpiar pantalla del Jugador 1
+      //oledFill(&ssoled[0], 0, 1);  // Limpiar pantalla del Jugador 1
       mostrarTextoSuperior(&ssoled[0], segundos1);  // Actualizar hr/min o min/sec en la pantalla del Jugador 1
       mostrarTiempoRestante(&ssoled[0], segundos1);  // Actualizar tiempo restante en la pantalla del Jugador 1
       mostrarBonus(&ssoled[0]);  // Mostrar "Bonus" en la pantalla del Jugador 1
