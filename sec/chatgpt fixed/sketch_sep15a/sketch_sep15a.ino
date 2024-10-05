@@ -144,7 +144,7 @@ void loop() {
       mostrarTiempoRestante(&ssoled[1], segundos2);  // Mostrar tiempo restante
       mostrarBonus(&ssoled[1]);  // Mostrar "Bonus" en la pantalla del Jugador 2
       mostrarMovimientos(&ssoled[1], moves2);  // Mostrar movimientos del Jugador 2
-      mostrarPlay(&ssoled[1]);  // Mostrar "Play" en la pantalla del Jugador 2
+      mostrarPlay(&ssoled[0]);  // Mostrar "Play" en la pantalla del Jugador 2
 
       //oledFill(&ssoled[0], 0, 1);  // Limpiar pantalla del Jugador 1
       mostrarTextoSuperior(&ssoled[0], segundos1);  // Actualizar hr/min o min/sec en la pantalla del Jugador 1

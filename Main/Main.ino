@@ -14,32 +14,31 @@
 #define MY_OLED1 OLED_128x64
 #define MY_OLED2 OLED_128x64
 
+#define PAUSE 3
+
 SSOLED ssoled[2];
 
 unsigned long clock, segundos, ultimoclock;
-unsigned long segundos1 = 600;  // 10 minutos en segundos
-unsigned long segundos2 = 600;  // 10 minutos en segundos
-const unsigned long bonus = 00; // Bonus de 10 segundos por movimiento
-int moves1 = 0, moves2 = 0;     // Contadores de movimientos
-byte balancinstat, balancinstat2;
-int player = 0;
-bool boton1Presionado = false;
-bool boton2Presionado = false;
-bool pause = true;
+unsigned long segundosJugador[2];
+const unsigned long bonus = 0; // Bonus de 10 segundos por movimiento
+int moves[2];     // Contadores de movimientos
+int player = PAUSE;
+bool botonPresionado[2];
 
 void setup() {
-  int rc;
-  rc = oledInit(&ssoled[0], MY_OLED1, OLED_ADDR, FLIP180, INVERT, 1, SDA_PIN, SCL_PIN, RESET_PIN, 400000L);
-  rc = oledInit(&ssoled[1], MY_OLED2, OLED_ADDR, FLIP180, INVERT, 0, GROVE_SDA_PIN, GROVE_SCL_PIN, RESET_PIN, 400000L);
+  int inutil;
+  inutil = oledInit(&ssoled[0], MY_OLED1, OLED_ADDR, FLIP180, INVERT, 1, SDA_PIN, SCL_PIN, RESET_PIN, 400000L);
+  inutil = oledInit(&ssoled[1], MY_OLED2, OLED_ADDR, FLIP180, INVERT, 0, GROVE_SDA_PIN, GROVE_SCL_PIN, RESET_PIN, 400000L);
   
-  oledFill(&ssoled[0], 0, 1);
-  oledWriteString(&ssoled[0], 0, 0, 0, (char *)"DME Chess Clock", FONT_NORMAL, 0, 1);
-  oledWriteString(&ssoled[0], 0, 10, 3, (char *)"INIT", FONT_STRETCHED, 0, 1); // Mensaje inicial para Jugador 1
-  
-  oledFill(&ssoled[1], 0, 1);
-  oledWriteString(&ssoled[0], 0, 0, 0, (char *)"vINT X", FONT_NORMAL, 0, 1);
-  oledWriteString(&ssoled[0], 0, 10, 3, (char *)"INIT", FONT_STRETCHED, 0, 1); // Mensaje inicial para Jugador 1
-  
+  for(int i=0;i<2;i++){
+    segundosJugador[i]=600;  // 10 minutos en segundos
+    moves[i]=0;
+    botonPresionado[i]=0;
+    oledFill(&ssoled[i], 0, 1);
+    oledWriteString(&ssoled[0], 0, 0, 0, (char *)"DME Chess Clock", FONT_NORMAL, 0, 1);
+    oledWriteString(&ssoled[1], 0, 0, 0, (char *)"vINT X", FONT_NORMAL, 0, 1);
+    oledWriteString(&ssoled[i], 0, 10, 3, (char *)"INIT", FONT_STRETCHED, 0, 1); // Mensaje inicial
+  }  
   Serial.begin(9600);
   ultimoclock = 0;
 
@@ -55,11 +54,7 @@ void setup() {
   
   oledFill(&ssoled[0], 0, 1);
   oledFill(&ssoled[1], 0, 1);
-  mostrarTextoSuperior(&ssoled[1], segundos2);  // Mostrar hr/min o min/sec
-  mostrarTiempoRestante(&ssoled[1], segundos2);  // Mostrar tiempo restante
-  mostrarBonus(&ssoled[1]);  // Mostrar "Bonus" en la pantalla del Jugador 2
-  mostrarMovimientos(&ssoled[1], moves2);  // Mostrar movimientos del Jugador 2 (inicialmente 0)
-  oledWriteString(&ssoled[1], 0, 0, 0, (char *)"Moves: 0", FONT_NORMAL, 0, 1);  // Contador de movimientos
+
 }
 
 // Función para convertir segundos a hh:mm o mm:ss
@@ -88,7 +83,7 @@ void mostrarTextoSuperior(SSOLED *oled, unsigned long segundosRestantes) {
 
 // Función para mostrar "Bonus" en la parte inferior izquierda de la pantalla
 void mostrarBonus(SSOLED *oled) {
-  //oledWriteString(oled, 0, 0, 7, (char *)"Bonus", FONT_SMALL, 0, 1);  // Mostrar "Bonus" en la esquina inferior izquierda
+
 }
 
 // Función para mostrar movimientos
@@ -98,93 +93,101 @@ void mostrarMovimientos(SSOLED *oled, int movimientos) {
   oledWriteString(oled, 0, 0, 0, buffer, FONT_NORMAL, 0, 1);
 }
 
+void refrescaDisplay(SSOLED *pantalla, unsigned long segunds, int mov)
+{
+	  mostrarTextoSuperior(pantalla, segunds);  // Mostrar hr/min o min/sec
+      mostrarTiempoRestante(pantalla, segunds);  // Mostrar tiempo restante
+      mostrarBonus(pantalla);  // Mostrar "Bonus" en la pantalla del Jugador 1
+      mostrarMovimientos(pantalla, mov);  // Mostrar movimientos del Jugador 1
+
+}
+/*void Mensaje(char Texto){
+  oledWriteString(oled, 0, 0, 7, (char *)Texto, FONT_SMALL, 0, 1);  // Mostrar "Bonus" en la esquina inferior izquierda
+}*/
+
 void loop() {
   clock = millis();
   segundos = clock / 1000;
-  /*if (pause == true){
-    oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Pause", FONT_NORMAL, 0, 1);
-  }
-  else{
-    oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Play", FONT_NORMAL, 0, 1);
-  }*/
+
   if (clock > (ultimoclock + 999)) {
     ultimoclock = clock;
 
-    if (player == 0) {  // Jugador 1
-      if (segundos1 > 0) {
-        if (pause == false){
-          segundos1--;
-        }
+    switch(player)
+    {
+    case 0:
+    oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Play 1", FONT_NORMAL, 0, 1);
+    if (segundosJugador[0] > 0) {
+          segundosJugador[0]--;
       }
-      digitalWrite(12, HIGH);
-      digitalWrite(11, LOW);
-
-      mostrarTextoSuperior(&ssoled[0], segundos1);  // Mostrar hr/min o min/sec
-      mostrarTiempoRestante(&ssoled[0], segundos1);  // Mostrar tiempo restante
-      mostrarBonus(&ssoled[0]);  // Mostrar "Bonus" en la pantalla del Jugador 1
-      mostrarMovimientos(&ssoled[0], moves1);  // Mostrar movimientos del Jugador 1
-
-      if (segundos1 == 0) {
+//      digitalWrite(12, HIGH);
+//      digitalWrite(11, LOW);
+      if (segundosJugador[0] == 0) {
         digitalWrite(9, HIGH);
         delay(500);
       }
+    break;
 
-    } else {  // Jugador 2
-      if (segundos2 > 0) {
-        if (pause == false){
-          segundos2--;
-        }
+    case 1:
+    oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Play 2", FONT_NORMAL, 0, 1);
+      if (segundosJugador[1] > 0) {
+          segundosJugador[1]--;
       }
-      digitalWrite(11, HIGH);
-      digitalWrite(12, LOW);
-
-      mostrarTextoSuperior(&ssoled[1], segundos2);  // Mostrar hr/min o min/sec
-      mostrarTiempoRestante(&ssoled[1], segundos2);  // Mostrar tiempo restante
-      mostrarBonus(&ssoled[1]);  // Mostrar "Bonus" en la pantalla del Jugador 2
-      mostrarMovimientos(&ssoled[1], moves2);  // Mostrar movimientos del Jugador 2
-
-      if (segundos2 == 0) {
+//      digitalWrite(11, HIGH);
+//      digitalWrite(12, LOW);
+      if (segundosJugador[1] == 0) {
         digitalWrite(10, HIGH);
         delay(500);
       }
+    break;
+
+    case PAUSE:
+      oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Pause", FONT_NORMAL, 0, 1);
+    break;
+
+    default:
+      oledWriteString(&ssoled[0], 0, 85, 7, (char *)"ERROR", FONT_NORMAL, 0, 1);
+      Serial.println("Error: estado desconocido");
     }
+
+    for(int i=0;i<2;i++){
+     refrescaDisplay(&ssoled[i],segundosJugador[i], moves[i]);
+    }
+
   }
 
   // Detectar el botón del Jugador 1
-  if (digitalRead(2) == LOW && !boton1Presionado && player == 0) {  
+  if (digitalRead(2) == LOW && !botonPresionado[0] && (player == 0 || player==PAUSE)) {  
     player = 1;  // Cambia al Jugador 2
-    segundos2 += bonus;  // Agregar bonus al Jugador 2
-    moves1++;  // Incrementar movimientos del Jugador 1
-    boton1Presionado = true;
+    segundosJugador[1] += bonus;  // Agregar bonus al Jugador 2
+    moves[0]++;  // Incrementar movimientos del Jugador 1
+    botonPresionado[0] = true;
     Serial.println("Cambio a Jugador 2");
   }
+  else botonPresionado[0] = false;
   
   if (digitalRead(2) == HIGH) {
-    boton1Presionado = false;
+    botonPresionado[0] = false;
   }
 
   // Detectar el botón del Jugador 2
-  if (digitalRead(3) == LOW && !boton2Presionado && player == 1) {  
+  if (digitalRead(3) == LOW && !botonPresionado[1] && (player == 1 || player==PAUSE)) {  
     player = 0;  // Cambia al Jugador 1
-    segundos1 += bonus;  // Agregar bonus al Jugador 1
-    moves2++;  // Incrementar movimientos del Jugador 2
-    boton2Presionado = true;
+    segundosJugador[0] += bonus;  // Agregar bonus al Jugador 1
+    moves[1]++;  // Incrementar movimientos del Jugador 2
+    botonPresionado[1] = true;
     Serial.println("Cambio a Jugador 1");
   }
+  else botonPresionado[1] = false;
   
   if (digitalRead(3) == HIGH) {
-    boton2Presionado = false;
+    botonPresionado[1] = false;
   }
 
-  if (digitalRead(5) == HIGH) {
-    if (pause == true){
-      pause = false;
-      //oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Play", FONT_NORMAL, 0, 1);
-    }
-    else
-    {
-      pause = true;
-      //oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Pause", FONT_NORMAL, 0, 1);
-    }
-  }
+// Detectar el botón del PAUSE
+  
+ if (digitalRead(5) == LOW) {
+  player=PAUSE;
+  Serial.println("PAUSE");
+ }
+
 }
