@@ -20,7 +20,7 @@ SSOLED ssoled[2];
 
 unsigned long clock, segundos, ultimoclock;
 unsigned long segundosJugador[2];
-const unsigned long bonus = 0; // Bonus de 10 segundos por movimiento
+const unsigned long bonus = 30; // Bonus de 10 segundos por movimiento
 int moves[2];     // Contadores de movimientos
 int player = PAUSE;
 bool botonPresionado[2];
@@ -31,7 +31,7 @@ void setup() {
   inutil = oledInit(&ssoled[1], MY_OLED2, OLED_ADDR, FLIP180, INVERT, 0, GROVE_SDA_PIN, GROVE_SCL_PIN, RESET_PIN, 400000L);
   
   for(int i=0;i<2;i++){
-    segundosJugador[i]=600;  // 10 minutos en segundos
+    segundosJugador[i]=3605;  // 10 minutos en segundos
     moves[i]=0;
     botonPresionado[i]=0;
     oledFill(&ssoled[i], 0, 1);
@@ -63,27 +63,32 @@ void mostrarTiempoRestante(SSOLED *oled, unsigned long segundosRestantes) {
   if (segundosRestantes >= 3600) {  // Si hay más de 1 hora
     int horas = segundosRestantes / 3600;
     int minutos = (segundosRestantes % 3600) / 60;
-    sprintf(buffer, "%02d:%02d", horas, minutos);  // Mostrar solo horas y minutos
+    int segundos = segundosRestantes % 60;
+    sprintf(buffer, "%2d:%02d:%02d", horas, minutos, segundos);  // Mostrar solo horas y minutos
+    oledWriteString(oled, 0, 0, 3, buffer, FONT_STRETCHED, 0, 1);
   } else {  // Menos de 1 hora
     int minutos = segundosRestantes / 60;
     int segundos = segundosRestantes % 60;
-    sprintf(buffer, "%02d:%02d", minutos, segundos);  // Mostrar minutos y segundos
+    sprintf(buffer, "%02d:%02d      ", minutos, segundos);  // Mostrar minutos y segundos
+    oledWriteString(oled, 0, 18, 3, buffer, FONT_STRETCHED, 0, 1);
   }
-  oledWriteString(oled, 0, 20, 3, buffer, FONT_STRETCHED, 0, 1);
+  
 }
 
 // Función para actualizar el texto en la parte superior
-void mostrarTextoSuperior(SSOLED *oled, unsigned long segundosRestantes) {
+/*void mostrarTextoSuperior(SSOLED *oled, unsigned long segundosRestantes) {
   if (segundosRestantes >= 3600) {
     oledWriteString(oled, 0, 85, 0, (char *)"hr/min", FONT_SMALL, 0, 1);  // Cambia a hr/min
   } else {
     oledWriteString(oled, 0, 85, 0, (char *)"min/sec", FONT_SMALL, 0, 1);  // Cambia a min/sec
   }
-}
+}*/
 
 // Función para mostrar "Bonus" en la parte inferior izquierda de la pantalla
-void mostrarBonus(SSOLED *oled) {
-
+void mostrarBonus() {
+  if (bonus!=0){
+      oledWriteString(&ssoled[1], 0, 0, 7, "bonus", FONT_SMALL, 0, 1);
+  }
 }
 
 // Función para mostrar movimientos
@@ -95,10 +100,10 @@ void mostrarMovimientos(SSOLED *oled, int movimientos) {
 
 void refrescaDisplay(SSOLED *pantalla, unsigned long segunds, int mov)
 {
-	  mostrarTextoSuperior(pantalla, segunds);  // Mostrar hr/min o min/sec
-      mostrarTiempoRestante(pantalla, segunds);  // Mostrar tiempo restante
-      mostrarBonus(pantalla);  // Mostrar "Bonus" en la pantalla del Jugador 1
-      mostrarMovimientos(pantalla, mov);  // Mostrar movimientos del Jugador 1
+//	mostrarTextoSuperior(pantalla, segunds);  // Mostrar hr/min o min/sec
+  mostrarTiempoRestante(pantalla, segunds);  // Mostrar tiempo restante
+  mostrarBonus();  // Mostrar "Bonus" en la pantalla del Jugador 1
+  mostrarMovimientos(pantalla, mov);  // Mostrar movimientos del Jugador 1
 
 }
 /*void Mensaje(char Texto){
@@ -115,7 +120,7 @@ void loop() {
     switch(player)
     {
     case 0:
-    oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Play 1", FONT_NORMAL, 0, 1);
+    oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Play ", FONT_NORMAL, 0, 1);
     if (segundosJugador[0] > 0) {
           segundosJugador[0]--;
       }
@@ -128,7 +133,7 @@ void loop() {
     break;
 
     case 1:
-    oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Play 2", FONT_NORMAL, 0, 1);
+    oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Play ", FONT_NORMAL, 0, 1);
       if (segundosJugador[1] > 0) {
           segundosJugador[1]--;
       }
@@ -158,7 +163,7 @@ void loop() {
   // Detectar el botón del Jugador 1
   if (digitalRead(2) == LOW && !botonPresionado[0] && (player == 0 || player==PAUSE)) {  
     player = 1;  // Cambia al Jugador 2
-    segundosJugador[1] += bonus;  // Agregar bonus al Jugador 2
+    segundosJugador[0] += bonus;  // Agregar bonus al Jugador 2
     moves[0]++;  // Incrementar movimientos del Jugador 1
     botonPresionado[0] = true;
     Serial.println("Cambio a Jugador 2");
@@ -172,7 +177,7 @@ void loop() {
   // Detectar el botón del Jugador 2
   if (digitalRead(3) == LOW && !botonPresionado[1] && (player == 1 || player==PAUSE)) {  
     player = 0;  // Cambia al Jugador 1
-    segundosJugador[0] += bonus;  // Agregar bonus al Jugador 1
+    segundosJugador[1] += bonus;  // Agregar bonus al Jugador 1
     moves[1]++;  // Incrementar movimientos del Jugador 2
     botonPresionado[1] = true;
     Serial.println("Cambio a Jugador 1");
