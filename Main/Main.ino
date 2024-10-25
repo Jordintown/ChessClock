@@ -20,7 +20,7 @@ SSOLED ssoled[2];
 
 unsigned long clock, segundos, ultimoclock;
 unsigned long segundosJugador[2];
-const unsigned long bonus = 30; // Bonus de 10 segundos por movimiento
+int bonus;
 int moves[2];     // Contadores de movimientos
 int player = PAUSE;
 bool botonPresionado[2];
@@ -31,13 +31,14 @@ void setup() {
   inutil = oledInit(&ssoled[1], MY_OLED2, OLED_ADDR, FLIP180, INVERT, 0, GROVE_SDA_PIN, GROVE_SCL_PIN, RESET_PIN, 400000L);
   
   for(int i=0;i<2;i++){
-    segundosJugador[i]=3605;  // 10 minutos en segundos
+    segundosJugador[i]=300;  // 10 minutos en segundos
+    bonus=3;
     moves[i]=0;
     botonPresionado[i]=0;
     oledFill(&ssoled[i], 0, 1);
-    oledWriteString(&ssoled[0], 0, 0, 0, (char *)"DME Chess Clock", FONT_NORMAL, 0, 1);
-    oledWriteString(&ssoled[1], 0, 0, 0, (char *)"vINT X", FONT_NORMAL, 0, 1);
-    oledWriteString(&ssoled[i], 0, 10, 3, (char *)"INIT", FONT_STRETCHED, 0, 1); // Mensaje inicial
+    //oledWriteString(&ssoled[0], 0, 0, 0, (char *)"DME Chess Clock", FONT_NORMAL, 0, 1);
+    //oledWriteString(&ssoled[1], 0, 0, 0, (char *)"vINT X", FONT_NORMAL, 0, 1);
+    //oledWriteString(&ssoled[i], 0, 10, 3, (char *)"INIT", FONT_STRETCHED, 0, 1); // Mensaje inicial
   }  
   Serial.begin(9600);
   ultimoclock = 0;
@@ -51,12 +52,28 @@ void setup() {
   pinMode(4, INPUT_PULLUP);
   pinMode(5, INPUT_PULLUP);
   pinMode(6, INPUT_PULLUP);
-  
   oledFill(&ssoled[0], 0, 1);
   oledFill(&ssoled[1], 0, 1);
-
+  timeSetting(0);
 }
 
+void timeSetting(int type){
+  if (type == 0) { // initial sestting when u start the clock
+    while (digitalRead(5)!=HIGH){
+    oledWriteString(&ssoled[0], 0, 0, 0, (char *)"Time setting", FONT_NORMAL, 0, 1);
+    oledWriteString(&ssoled[0], 0, 0, 7, (char *)"PAUSE: confirm", FONT_NORMAL, 0, 1);
+    oledWriteString(&ssoled[0], 0, 10, 2, (char *)"Time:", FONT_SMALL, 0, 1);
+    oledWriteString(&ssoled[1], 0, 0, 7, (char *)"+/-: modify (not implemented)", FONT_NORMAL, 0, 1);
+    oledWriteString(&ssoled[0], 0, 20, 3, (char *)"XX:XX", FONT_STRETCHED, 0, 1);
+    oledFill(&ssoled[0], 0, 1);
+    oledFill(&ssoled[1], 0, 1);
+    Serial.println("Pause det");
+    }
+  } else if (type ==1){
+
+  }
+   else Serial.println("ERROR: parametro incorrecto");
+}
 // Función para convertir segundos a hh:mm o mm:ss
 void mostrarTiempoRestante(SSOLED *oled, unsigned long segundosRestantes) {
   char buffer[6];
@@ -65,7 +82,7 @@ void mostrarTiempoRestante(SSOLED *oled, unsigned long segundosRestantes) {
     int minutos = (segundosRestantes % 3600) / 60;
     int segundos = segundosRestantes % 60;
     sprintf(buffer, "%2d:%02d:%02d", horas, minutos, segundos);  // Mostrar solo horas y minutos
-    oledWriteString(oled, 0, 0, 3, buffer, FONT_STRETCHED, 0, 1);
+    oledWriteString(oled, 0, -1, 3, buffer, FONT_STRETCHED, 0, 1);
   } else {  // Menos de 1 hora
     int minutos = segundosRestantes / 60;
     int segundos = segundosRestantes % 60;
