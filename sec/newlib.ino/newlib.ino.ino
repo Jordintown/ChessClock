@@ -1,6 +1,6 @@
 #include <SPI.h>
 #include <Wire.h>
-#include <ss_oled.h>
+#include <OneBitDisplay.h>
 
 #define GROVE_SDA_PIN A2
 #define GROVE_SCL_PIN A3
@@ -16,7 +16,7 @@
 
 #define PAUSE 3
 
-SSOLED ssoled[2];
+OBDISP display[2];
 
 unsigned long clock, segundos, ultimoclock;
 unsigned long segundosJugador[2];
@@ -27,15 +27,15 @@ bool botonPresionado[2];
 
 void setup() {
     int inutil;
-    inutil = oledInit(&ssoled[0], MY_OLED1, OLED_ADDR, FLIP180, INVERT, 1, SDA_PIN, SCL_PIN, RESET_PIN, 400000L);
-    inutil = oledInit(&ssoled[1], MY_OLED2, OLED_ADDR, FLIP180, INVERT, 0, GROVE_SDA_PIN, GROVE_SCL_PIN, RESET_PIN, 400000L);
+    inutil = obdI2CInit(&display[0], MY_OLED1, OLED_ADDR, FLIP180, INVERT, 1, SDA_PIN, SCL_PIN, RESET_PIN, 400000L);
+    inutil = obdI2CInit(&display[1], MY_OLED2, OLED_ADDR, FLIP180, INVERT, 0, GROVE_SDA_PIN, GROVE_SCL_PIN, RESET_PIN, 400000L);
   
-    for(int i = 0; i < 2; i++) {
-        segundosJugador[i] = 36000;  // 5 minutos en segundos
-        bonus = 30;
+    for (int i = 0; i < 2; i++) {
+        segundosJugador[i] = 300;  // 5 minutos en segundos
+        bonus = 3;
         moves[i] = 0;
         botonPresionado[i] = 0;
-        oledFill(&ssoled[i], 0, 1);
+        obdFill(&display[i], 0, 1);  // Limpia la pantalla
     }  
     Serial.begin(9600);
     ultimoclock = 0;
@@ -49,26 +49,27 @@ void setup() {
     pinMode(4, INPUT_PULLUP);
     pinMode(5, INPUT_PULLUP);
     pinMode(6, INPUT_PULLUP);
-    oledFill(&ssoled[0], 0, 1);
-    oledFill(&ssoled[1], 0, 1);
+    obdFill(&display[0], 0, 1);
+    obdFill(&display[1], 0, 1);
     timeSetting(0);
 }
 
 void timeSetting(int type) {
     char buf[6];
     if (type == 0) { // Initial setting when starting the clock
-      while (digitalRead(5) == HIGH) {
-        oledWriteString(&ssoled[0], 0, 0, 0, (char *)"Confirm time settings", FONT_SMALL, 0, 1);
-        oledWriteString(&ssoled[0], 0, 0, 1, (char *)"retrieved from memory", FONT_SMALL, 0, 1);
-        oledWriteString(&ssoled[0], 0, 0, 7, (char *)"PAUSE: confirm", FONT_NORMAL, 0, 1);
-        oledWriteString(&ssoled[0], 0, 0, 6, (char *)"+/-: modify", FONT_NORMAL, 0, 1);
-        ToHMS(segundosJugador[0],buf);
-        oledWriteString(&ssoled[1], 0, 0, 2, (char *)buf, FONT_STRETCHED, 0, 1);
-        ToHMS(bonus,buf);
-        oledWriteString(&ssoled[1], 0, 0, 5, (char *)buf, FONT_STRETCHED, 0, 1);
-      }
-      oledFill(&ssoled[0], 0, 1);
-      oledFill(&ssoled[1], 0, 1);
+        while (digitalRead(5) == HIGH) {
+            obdWriteString(&display[0], 0, 0, 0, (char *)"Time setting", FONT_SMALL, 0, 1);
+            obdWriteString(&display[0], 0, 0, 7, (char *)"PAUSE: confirm", FONT_NORMAL, 0, 1);
+            obdWriteString(&display[0], 0, 10, 1, (char *)"Time:", FONT_SMALL, 0, 1);
+            obdWriteString(&display[1], 0, 10, 1, (char *)"Bonus:", FONT_SMALL, 0, 1);
+            obdWriteString(&display[1], 0, 0, 7, (char *)"+/-: modify", FONT_NORMAL, 0, 1);
+            ToHMS(segundosJugador[0], buf);
+            obdWriteString(&display[0], 0, 20, 3, (char *)buf, FONT_STRETCHED, 0, 1);
+            ToHMS(bonus, buf);
+            obdWriteString(&display[1], 0, 20, 3, (char *)buf, FONT_STRETCHED, 0, 1);
+        }
+        obdFill(&display[0], 0, 1);
+        obdFill(&display[1], 0, 1);
     } else if (type == 1) {
         // Implementa lógica adicional aquí si es necesario
     } else {
@@ -76,62 +77,52 @@ void timeSetting(int type) {
     }
 }
 
-// Función para convertir cualquier variable a string
-String variableToString(int value) {
-    return String(value);
-}
-
-String variableToString(unsigned long value) {
-    return String(value);
-}
-
-// Para otros tipos, puedes agregar más sobrecargas si es necesario
-
 // Función para convertir segundos a hh:mm o mm:ss
-void mostrarTiempoRestante(SSOLED *oled, unsigned long segundosRestantes) {
+void mostrarTiempoRestante(OBDISP *oled, unsigned long segundosRestantes) {
     char buffer[6];
     if (segundosRestantes >= 3600) {  // Si hay más de 1 hora
         int horas = segundosRestantes / 3600;
         int minutos = (segundosRestantes % 3600) / 60;
         int segundos = segundosRestantes % 60;
-        sprintf(buffer, "%2d:%02d:%02d", horas, minutos, segundos);  // Mostrar solo horas y minutos
-        oledWriteString(oled, 0, 0, 3, buffer, FONT_STRETCHED, 0, 1);
+        sprintf(buffer, "%2d:%02d:%02d", horas, minutos, segundos);
+        obdWriteString(oled, 0, -1, 3, buffer, FONT_STRETCHED, 0, 1);
     } else {  // Menos de 1 hora
         int minutos = segundosRestantes / 60;
         int segundos = segundosRestantes % 60;
-        sprintf(buffer, "%02d:%02d   ", minutos, segundos);  // Mostrar minutos y segundos
-        oledWriteString(oled, 0, 18, 3, buffer, FONT_STRETCHED, 0, 1);
+        sprintf(buffer, "%02d:%02d      ", minutos, segundos);
+        obdWriteString(oled, 0, 18, 3, buffer, FONT_STRETCHED, 0, 1);
     }
 }
 
 char* ToHMS(unsigned long seg, char *buffer) {
-  //char buffer[6];
-  if (seg >= 3600) {  // Si hay más de 1 hora
-    int horas = seg / 3600;
-    int minutos = (seg % 3600) / 60;
-    int segundos = seg % 60;
-    sprintf(buffer, "%2d:%02d:%02d   ", horas, minutos, segundos);  // Mostrar solo horas y minutos
-    return buffer;
-  } else {  // Menos de 1 hora
-    int minutos = seg / 60;
-    int segundos = seg % 60;
-    sprintf(buffer, " %02d:%02d      ", minutos, segundos);  // Mostrar minutos y segundos
-    return buffer;
-  }
+    if (seg >= 3600) {  // Si hay más de 1 hora
+        int horas = seg / 3600;
+        int minutos = (seg % 3600) / 60;
+        int segundos = seg % 60;
+        sprintf(buffer, "%2d:%02d:%02d", horas, minutos, segundos);
+        return buffer;
+    } else {  // Menos de 1 hora
+        int minutos = seg / 60;
+        int segundos = seg % 60;
+        sprintf(buffer, "%02d:%02d      ", minutos, segundos);
+        return buffer;
+    }
 }
+
 // Función para mostrar "Bonus" en la parte inferior izquierda de la pantalla
 void mostrarBonus() {
     if (bonus != 0) {
-        oledWriteString(&ssoled[1], 0, 0, 7, "bonus", FONT_SMALL, 0, 1);
+        obdWriteString(&display[1], 0, 0, 7, "bonus", FONT_SMALL, 0, 1);
     }
 }
 
 // Función para mostrar movimientos
-void mostrarMovimientos(SSOLED *oled, int movimientos) {
-    //oledWriteString(oled, 0, 0, 0, (char *)("Moves: " + variableToString(movimientos)).c_str(), FONT_NORMAL, 0, 1);
+void mostrarMovimientos(OBDISP *oled, int movimientos) {
+    String movimientoTexto = "Moves: " + String(movimientos);
+    obdWriteString(oled, 0, 0, 0, (char *)movimientoTexto.c_str(), FONT_NORMAL, 0, 1);
 }
 
-void refrescaDisplay(SSOLED *pantalla, unsigned long segunds, int mov) {
+void refrescaDisplay(OBDISP *pantalla, unsigned long segunds, int mov) {
     mostrarTiempoRestante(pantalla, segunds);  // Mostrar tiempo restante
     mostrarBonus();  // Mostrar "Bonus" en la pantalla del Jugador 1
     mostrarMovimientos(pantalla, mov);  // Mostrar movimientos del Jugador 1
@@ -146,7 +137,7 @@ void loop() {
 
         switch (player) {
         case 0:
-            oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Play ", FONT_NORMAL, 0, 1);
+            obdWriteString(&display[0], 0, 85, 7, (char *)"Play ", FONT_NORMAL, 0, 1);
             if (segundosJugador[0] > 0) {
                 segundosJugador[0]--;
             }
@@ -157,7 +148,7 @@ void loop() {
             break;
 
         case 1:
-            oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Play ", FONT_NORMAL, 0, 1);
+            obdWriteString(&display[0], 0, 85, 7, (char *)"Play ", FONT_NORMAL, 0, 1);
             if (segundosJugador[1] > 0) {
                 segundosJugador[1]--;
             }
@@ -168,16 +159,16 @@ void loop() {
             break;
 
         case PAUSE:
-            oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Pause", FONT_NORMAL, 0, 1);
+            obdWriteString(&display[0], 0, 85, 7, (char *)"Pause", FONT_NORMAL, 0, 1);
             break;
 
         default:
-            oledWriteString(&ssoled[0], 0, 85, 7, (char *)"ERROR", FONT_NORMAL, 0, 1);
+            obdWriteString(&display[0], 0, 85, 7, (char *)"ERROR", FONT_NORMAL, 0, 1);
             Serial.println("Error: estado desconocido");
         }
 
         for (int i = 0; i < 2; i++) {
-            refrescaDisplay(&ssoled[i], segundosJugador[i], moves[i]);
+            refrescaDisplay(&display[i], segundosJugador[i], moves[i]);
         }
     }
 
@@ -201,11 +192,5 @@ void loop() {
         Serial.println("Cambio a Jugador 1");
     } else {
         botonPresionado[1] = false;
-    }
-
-    // Detectar el botón del PAUSE
-    if (digitalRead(5) == LOW) {
-        player = PAUSE;
-        Serial.println("PAUSE");
     }
 }
