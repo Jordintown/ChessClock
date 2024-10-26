@@ -60,7 +60,7 @@ rc = oledInit(&ssoled[1], MY_OLED2, OLED_ADDR, FLIP180, INVERT, 0, GROVE_SDA_PIN
     oledFill(&ssoled[1], 0, 1);
     oledSetTextWrap(&ssoled[1], 1);
     oledWriteString(&ssoled[1], 0,0,0,msgs[rc], FONT_NORMAL, 0, 1);
-    oledWriteString(&ssoled[1], 0,8,3,(char *)"Display", FONT_STRETCHED, 0, 1);
+    oledWriteString(&ssoled[1], 1,0,0,(char *)"Display", FONT_LARGE, 0, 1);
     oledWriteString(&ssoled[1], 0,56,6,(char *)"1", FONT_STRETCHED, 0, 1);
   }
 } /* setup() */

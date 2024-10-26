@@ -18,205 +18,229 @@
 
 SSOLED ssoled[2];
 
-unsigned long clock, segundos, ultimoclock;
-unsigned long segundosJugador[2];
-int bonus;
-int moves[2];     // Contadores de movimientos
+unsigned long clock, lastClock;
+unsigned long secondsLeft[2];
+unsigned long bonusSeconds, bonusMinutes; // Separate bonus time variables
+int moves[2];     // Move counters
 int player = PAUSE;
-bool botonPresionado[2];
+bool buttonPressed[2];
+unsigned long prevDisplay[2] = {0, 0}; // Previous display values for time
 
 void setup() {
-    int inutil;
-    inutil = oledInit(&ssoled[0], MY_OLED1, OLED_ADDR, FLIP180, INVERT, 1, SDA_PIN, SCL_PIN, RESET_PIN, 400000L);
-    inutil = oledInit(&ssoled[1], MY_OLED2, OLED_ADDR, FLIP180, INVERT, 0, GROVE_SDA_PIN, GROVE_SCL_PIN, RESET_PIN, 400000L);
-  
-    for(int i = 0; i < 2; i++) {
-        segundosJugador[i] = 100;  // 5 minutos en segundos
-        bonus = 30;
-        moves[i] = 0;
-        botonPresionado[i] = 0;
-        oledFill(&ssoled[i], 0, 1);
-    }  
     Serial.begin(9600);
-    ultimoclock = 0;
+    int initStatus;
 
-    pinMode(12, OUTPUT);
-    pinMode(11, OUTPUT);
-    pinMode(10, OUTPUT);
-    pinMode(9, OUTPUT);
-    pinMode(2, INPUT_PULLUP);
-    pinMode(3, INPUT_PULLUP);
-    pinMode(4, INPUT_PULLUP);
-    pinMode(5, INPUT_PULLUP);
-    pinMode(6, INPUT_PULLUP);
-    oledFill(&ssoled[0], 0, 1);
-    oledFill(&ssoled[1], 0, 1);
-    timeSetting(0);
+    initStatus = oledInit(&ssoled[0], MY_OLED1, OLED_ADDR, FLIP180, INVERT, 1, SDA_PIN, SCL_PIN, RESET_PIN, 400000L);
+    initStatus = oledInit(&ssoled[1], MY_OLED2, OLED_ADDR, FLIP180, INVERT, 0, GROVE_SDA_PIN, GROVE_SCL_PIN, RESET_PIN, 400000L);
+  
+    for (int i = 0; i < 2; i++) {
+        secondsLeft[i] = 900; // Initialize with 15 minutes (900 seconds)
+        moves[i] = 0;
+        buttonPressed[i] = false;
+        oledFill(&ssoled[i], 0, 1);
+    }
+  
+    bonusSeconds = 5; // Initialize bonus seconds
+    bonusMinutes = 0; // Initialize bonus minutes
+    lastClock = 0;
+
+    pinMode(2, INPUT_PULLUP); // Player 1 button
+    pinMode(3, INPUT_PULLUP); // Player 2 button
+    pinMode(4, INPUT_PULLUP); // For increasing
+    pinMode(5, INPUT_PULLUP); // For confirm
+    pinMode(6, INPUT_PULLUP); // For decreasing
+    
+    timeSetting(1);
 }
 
 void timeSetting(int type) {
-    char buf[6];
-    if (type == 0) { // Initial setting when starting the clock
-      while (digitalRead(5) == HIGH) {
-        oledWriteString(&ssoled[0], 0, 0, 0, (char *)"Confirm time settings", FONT_SMALL, 0, 1);
-        oledWriteString(&ssoled[0], 0, 0, 1, (char *)"retrieved from memory", FONT_SMALL, 0, 1);
-        oledWriteString(&ssoled[0], 0, 0, 7, (char *)"PAUSE: confirm", FONT_NORMAL, 0, 1);
-        oledWriteString(&ssoled[0], 0, 0, 6, (char *)"+/-: modify", FONT_NORMAL, 0, 1);
-        ToHMS(segundosJugador[0],buf);
-        oledWriteString(&ssoled[1], 0, 0, 2, (char *)buf, FONT_STRETCHED, 0, 1);
-        ToHMS(bonus,buf);
-        oledWriteString(&ssoled[1], 0, 0, 5, (char *)buf, FONT_STRETCHED, 0, 1);
-      }
-      oledFill(&ssoled[0], 0, 1);
-      oledFill(&ssoled[1], 0, 1);
-    } else if (type == 1) {
-      oledFill(&ssoled[0], 0, 1);
-      oledFill(&ssoled[1], 0, 1);
-      while (1==1){
-      oledWriteString(&ssoled[0], 0, 0, 0, (char *)"Clock Settings", FONT_NORMAL, 0, 1);
-      oledWriteString(&ssoled[0], 0, 0, 2, (char *)"Time", FONT_SMALL, 0, 1);
-      if (digitalRead(5)== LOW){
-        break;
-      }
-      }
-    } else {
-        Serial.println("ERROR: parametro incorrecto");
+    char buf[15];
+    unsigned long *timeSettingVar;  // Pointer to the time setting variable
+    int timeSettingStage = 0; // Track which part of the time is being set
+    bool adjustingTime = true;  // Flag to indicate time setting mode
+
+    while (adjustingTime) {
+        oledFill(&ssoled[0], 0, 1);
+        oledWriteString(&ssoled[0], 0, 0, 0, (char *)"Time Settings", FONT_SMALL, 0, 1);
+        oledWriteString(&ssoled[0], 0, 0, 1, (char *)"Press 5 to confirm", FONT_SMALL, 0, 1);
+        oledWriteString(&ssoled[0], 0, 0, 2, (char *)"Press 4 to change", FONT_SMALL, 0, 1);
+        oledWriteString(&ssoled[0], 0, 0, 3, (char *)"Press 6 to decrease", FONT_SMALL, 0, 1);
+
+        // Show current time and bonus values based on the current setting stage
+        switch (timeSettingStage) {
+            case 0: // Setting seconds
+                oledWriteString(&ssoled[0], 0, 0, 4, (char *)"Set Seconds", FONT_SMALL, 0, 1);
+                ToHMS(secondsLeft[0], buf);
+                oledWriteString(&ssoled[1], 0, 0, 2, (char *)buf, FONT_STRETCHED, 0, 1);
+                break;
+            case 1: // Setting minutes
+                oledWriteString(&ssoled[0], 0, 0, 4, (char *)"Set Minutes", FONT_SMALL, 0, 1);
+                ToHMS(secondsLeft[0] + 3600, buf); // Displaying as hours and minutes
+                oledWriteString(&ssoled[1], 0, 0, 2, (char *)buf, FONT_STRETCHED, 0, 1);
+                break;
+            case 2: // Setting hours
+                oledWriteString(&ssoled[0], 0, 0, 4, (char *)"Set Hours", FONT_SMALL, 0, 1);
+                ToHMS(secondsLeft[0] + 7200, buf); // Displaying as hours and minutes
+                oledWriteString(&ssoled[1], 0, 0, 2, (char *)buf, FONT_STRETCHED, 0, 1);
+                break;
+            case 3: // Setting bonus seconds
+                oledWriteString(&ssoled[0], 0, 0, 4, (char *)"Set Bonus Sec", FONT_SMALL, 0, 1);
+                ToHMS(bonusSeconds, buf);
+                oledWriteString(&ssoled[1], 0, 0, 2, (char *)buf, FONT_STRETCHED, 0, 1);
+                break;
+            case 4: // Setting bonus minutes
+                oledWriteString(&ssoled[0], 0, 0, 4, (char *)"Set Bonus Min", FONT_SMALL, 0, 1);
+                ToHMS(bonusMinutes * 60, buf); // Displaying bonus minutes in seconds
+                oledWriteString(&ssoled[1], 0, 0, 2, (char *)buf, FONT_STRETCHED, 0, 1);
+                break;
+        }
+
+        if (digitalRead(5) == LOW) {  // Confirm setting
+            if (timeSettingStage < 4) {
+                timeSettingStage++; // Move to the next stage
+            } else {
+                adjustingTime = false;  // Exit the loop and save changes
+                Serial.println("Settings saved.");
+                oledWriteString(&ssoled[0], 0, 0, 5, (char *)"Settings Saved", FONT_SMALL, 0, 1);
+                delay(2000); // Show confirmation for 2 seconds
+            }
+            delay(200); // Debounce delay
+        }
+        
+        if (digitalRead(4) == LOW) {  // Increase
+            switch (timeSettingStage) {
+                case 0:
+                    secondsLeft[0] = min(59UL, secondsLeft[0] + 1); // Limit to 59 seconds
+                    break;
+                case 1:
+                    secondsLeft[0] = min(59UL, (secondsLeft[0] / 60) + 1) * 60; // Limit to 59 minutes
+                    break;
+                case 2:
+                    secondsLeft[0] += 3600; // Increase by one hour
+                    break;
+                case 3:
+                    bonusSeconds = min(59UL, bonusSeconds + 1); // Limit to 59 seconds
+                    break;
+                case 4:
+                    bonusMinutes = min(59UL, bonusMinutes + 1); // Limit to 59 minutes
+                    break;
+            }
+            delay(200);  // Debounce delay
+        }
+
+        if (digitalRead(6) == LOW) {  // Decrease
+            switch (timeSettingStage) {
+                case 0:
+                    secondsLeft[0] = max(0UL, secondsLeft[0] - 1); // Decrease time
+                    break;
+                case 1:
+                    secondsLeft[0] = max(0UL, (secondsLeft[0] / 60) - 1) * 60; // Decrease time
+                    break;
+                case 2:
+                    if (secondsLeft[0] >= 3600) {
+                        secondsLeft[0] -= 3600; // Decrease by one hour
+                    }
+                    break;
+                case 3:
+                    bonusSeconds = max(0UL, bonusSeconds - 1); // Decrease bonus seconds
+                    break;
+                case 4:
+                    bonusMinutes = max(0UL, bonusMinutes - 1); // Decrease bonus minutes
+                    break;
+            }
+            delay(200);  // Debounce delay
+        }
+
+        if (digitalRead(4) == LOW || digitalRead(6) == LOW) { // Cancel settings
+            adjustingTime = false;  // Exit the loop
+            Serial.println("Settings canceled.");
+            oledWriteString(&ssoled[0], 0, 0, 5, (char *)"Settings Canceled", FONT_SMALL, 0, 1);
+            delay(2000); // Show cancellation for 2 seconds
+        }
     }
-}
 
-// Función para convertir cualquier variable a string
-String variableToString(int value) {
-    return String(value);
-}
-
-String variableToString(unsigned long value) {
-    return String(value);
-}
-
-// Para otros tipos, puedes agregar más sobrecargas si es necesario
-
-// Función para convertir segundos a hh:mm o mm:ss
-void mostrarTiempoRestante(SSOLED *oled, unsigned long segundosRestantes) {
-    char buffer[6];
-    if (segundosRestantes >= 3600) {  // Si hay más de 1 hora
-        int horas = segundosRestantes / 3600;
-        int minutos = (segundosRestantes % 3600) / 60;
-        int segundos = segundosRestantes % 60;
-        sprintf(buffer, "%2d:%02d:%02d", horas, minutos, segundos);  // Mostrar solo horas y minutos
-        oledWriteString(oled, 0, 0, 3, buffer, FONT_STRETCHED, 0, 1);
-    } else {  // Menos de 1 hora
-        int minutos = segundosRestantes / 60;
-        int segundos = segundosRestantes % 60;
-        sprintf(buffer, "%02d:%02d   ", minutos, segundos);  // Mostrar minutos y segundos
-        oledWriteString(oled, 0, 18, 3, buffer, FONT_STRETCHED, 0, 1);
-    }
+    oledFill(&ssoled[0], 0, 1);  // Clear the screen after setting
+    oledFill(&ssoled[1], 0, 1);
 }
 
 char* ToHMS(unsigned long seg, char *buffer) {
-  //char buffer[6];
-  if (seg >= 3600) {  // Si hay más de 1 hora
-    int horas = seg / 3600;
-    int minutos = (seg % 3600) / 60;
-    int segundos = seg % 60;
-    sprintf(buffer, "%2d:%02d:%02d   ", horas, minutos, segundos);  // Mostrar solo horas y minutos
+    int hours = seg / 3600;
+    int minutes = (seg % 3600) / 60;
+    int seconds = seg % 60;
+    sprintf(buffer, "%2d:%02d:%02d   ", hours, minutes, seconds);
     return buffer;
-  } else {  // Menos de 1 hora
-    int minutos = seg / 60;
-    int segundos = seg % 60;
-    sprintf(buffer, " %02d:%02d      ", minutos, segundos);  // Mostrar minutos y segundos
-    return buffer;
-  }
 }
-// Función para mostrar "Bonus" en la parte inferior izquierda de la pantalla
-void mostrarBonus() {
-    if (bonus != 0) {
-        oledWriteString(&ssoled[1], 0, 0, 7, "bonus", FONT_SMALL, 0, 1);
+
+// Function to display remaining time
+void mostrarTiempoRestante(SSOLED *oled, unsigned long segundosRestantes, unsigned long &prevDisplay) {
+    if (segundosRestantes != prevDisplay) {
+        char buffer[15];
+        ToHMS(segundosRestantes, buffer);
+        oledWriteString(oled, 0, 0, 3, buffer, FONT_STRETCHED, 0, 1);
+        prevDisplay = segundosRestantes;  // Update previous display value
     }
 }
 
-// Función para mostrar movimientos
-void mostrarMovimientos(SSOLED *oled, int movimientos) {
-    oledWriteString(oled, 0, 0, 0, (char *)("Moves: " + variableToString(movimientos)).c_str(), FONT_NORMAL, 0, 1);
+// Function to refresh the display
+void refrescaDisplay(SSOLED *pantalla, unsigned long segunds, unsigned long &prevDisplay) {
+    oledFill(pantalla, 0, 1);  // Clear the display first
+    mostrarTiempoRestante(pantalla, segunds, prevDisplay);  // Pass prevDisplay by reference
 }
 
-void refrescaDisplay(SSOLED *pantalla, unsigned long segunds, int mov) {
-    mostrarTiempoRestante(pantalla, segunds);  // Mostrar tiempo restante
-    mostrarBonus();  // Mostrar "Bonus" en la pantalla del Jugador 1
-    mostrarMovimientos(pantalla, mov);  // Mostrar movimientos del Jugador 1
-}
-
+// Main loop function
 void loop() {
     clock = millis();
-    segundos = clock / 1000;
 
-    if (clock > (ultimoclock + 999)) {
-        ultimoclock = clock;
+    if (clock > (lastClock + 999)) { // Update every second
+        lastClock = clock;
 
         switch (player) {
-        case 0:
-            oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Play ", FONT_NORMAL, 0, 1);
-            if (segundosJugador[0] > 0) {
-                segundosJugador[0]--;
-            }
-            if (segundosJugador[0] == 0) {
-                digitalWrite(9, HIGH);
-                delay(500);
-            }
-            break;
+            case 0:
+                if (secondsLeft[0] > 0) {
+                    secondsLeft[0]--;
+                }
+                break;
 
-        case 1:
-            oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Play ", FONT_NORMAL, 0, 1);
-            if (segundosJugador[1] > 0) {
-                segundosJugador[1]--;
-            }
-            if (segundosJugador[1] == 0) {
-                digitalWrite(10, HIGH);
-                delay(500);
-            }
-            break;
+            case 1:
+                if (secondsLeft[1] > 0) {
+                    secondsLeft[1]--;
+                }
+                break;
 
-        case PAUSE:
-            oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Pause", FONT_NORMAL, 0, 1);
-            break;
-
-        default:
-            oledWriteString(&ssoled[0], 0, 85, 7, (char *)"ERROR", FONT_NORMAL, 0, 1);
-            Serial.println("Error: estado desconocido");
+            case PAUSE:
+                break;
         }
 
+        // Refresh the display for both players
         for (int i = 0; i < 2; i++) {
-            refrescaDisplay(&ssoled[i], segundosJugador[i], moves[i]);
+            refrescaDisplay(&ssoled[i], secondsLeft[i], prevDisplay[i]); // Correct call
         }
     }
 
-    // Detectar el botón del Jugador 1
-    if (digitalRead(2) == LOW && !botonPresionado[0] && (player == 0 || player == PAUSE)) {  
-        player = 1;  // Cambia al Jugador 2
-        segundosJugador[0] += bonus;  // Agregar bonus al Jugador 2
-        moves[0]++;  // Incrementar movimientos del Jugador 1
-        botonPresionado[0] = true;
-        Serial.println("Cambio a Jugador 2");
-    } else {
-        botonPresionado[0] = false;
-    }
-  
-    // Detectar el botón del Jugador 2
-    if (digitalRead(3) == LOW && !botonPresionado[1] && (player == 1 || player == PAUSE)) {  
-        player = 0;  // Cambia al Jugador 1
-        segundosJugador[1] += bonus;  // Agregar bonus al Jugador 1
-        moves[1]++;  // Incrementar movimientos del Jugador 2
-        botonPresionado[1] = true;
-        Serial.println("Cambio a Jugador 1");
-    } else {
-        botonPresionado[1] = false;
+    // Detecting player buttons
+    if (digitalRead(2) == LOW && !buttonPressed[0] && (player == 0 || player == PAUSE)) {  
+        player = 1;  // Change to Player 2
+        secondsLeft[0] += bonusSeconds + (bonusMinutes * 60); // Add bonus to Player 2
+        moves[0]++;  // Increment Player 1 moves
+        buttonPressed[0] = true;
+        Serial.println("Player 1 pressed.");
     }
 
-    // Detectar el botón del PAUSE
-    if (digitalRead(5) == LOW) {
-        player = PAUSE;
-        Serial.println("PAUSE");
+    if (digitalRead(3) == LOW && !buttonPressed[1] && (player == 1 || player == PAUSE)) {
+        player = 0;  // Change to Player 1
+        secondsLeft[1] += bonusSeconds + (bonusMinutes * 60); // Add bonus to Player 1
+        moves[1]++;  // Increment Player 2 moves
+        buttonPressed[1] = true;
+        Serial.println("Player 2 pressed.");
     }
-    if (digitalRead(4) == LOW) {
-      timeSetting(1);
+
+    // Button release detection for Player 1
+    if (digitalRead(2) == HIGH) {
+        buttonPressed[0] = false;  // Reset button press flag for Player 1
+    }
+
+    // Button release detection for Player 2
+    if (digitalRead(3) == HIGH) {
+        buttonPressed[1] = false;  // Reset button press flag for Player 2
     }
 }
