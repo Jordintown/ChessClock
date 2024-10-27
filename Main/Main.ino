@@ -108,11 +108,7 @@ void timeSetting(int type) {
         oledFill(&ssoled[0], 0, 1);
         oledFill(&ssoled[1], 0, 1);
         oledWriteString(&ssoled[0], 0, 0, 0, (char *)"Default time settings", FONT_SMALL, 0, 1);
-        /*oledWriteString(&ssoled[0], 0, 0, 2, (char *)"Tip: these are for", FONT_SMALL, 0, 1);
-        oledWriteString(&ssoled[0], 0, 0, 3, (char *)"the start time.", FONT_SMALL, 0, 1);
-        oledWriteString(&ssoled[0], 0, 0, 3, (char *)"for cur. time press", FONT_SMALL, 0, 1);
-        oledWriteString(&ssoled[0], 0, 0, 4, (char *)"_ on the game screen", FONT_SMALL, 0, 1);
-        */oledWriteString(&ssoled[0], 0, 0, 7, (char *)"PAUSE: next/finish", FONT_NORMAL, 0, 1);
+        oledWriteString(&ssoled[0], 0, 0, 7, (char *)"PAUSE: next/conf.", FONT_NORMAL, 0, 1);
         oledWriteString(&ssoled[0], 0, 0, 6, (char *)"+/-: modify", FONT_NORMAL, 0, 1);
         oledWriteString(&ssoled[1], 0, 30, 0, (char *)"Time/Bonus", FONT_SMALL, 0, 1);
         ToHMS(persist.tiempo,buf);
@@ -154,6 +150,50 @@ void timeSetting(int type) {
         segundosJugador[0]=persist.tiempo;
         segundosJugador[1]=segundosJugador[0];
         EEPROM.put(0,persist);
+    }else if (type==2){
+      int mod = 0;
+        oledFill(&ssoled[0], 0, 1);
+        oledFill(&ssoled[1], 0, 1);
+        oledWriteString(&ssoled[0], 0, 0, 0, (char *)"Current game modif.", FONT_SMALL, 0, 1);
+        oledWriteString(&ssoled[0], 0, 0, 7, (char *)"PAUSE: next/conf.", FONT_NORMAL, 0, 1);
+        oledWriteString(&ssoled[0], 0, 0, 6, (char *)"+/-: modify", FONT_NORMAL, 0, 1);
+        oledWriteString(&ssoled[1], 0, 10, 0, (char *)"Player 1/Player 2", FONT_SMALL, 0, 1);
+        ToHMS(segundosJugador[0],buf);
+        oledWriteString(&ssoled[1], 0, 0, 2, (char *)buf, FONT_STRETCHED, 0, 1);
+        ToHMS(segundosJugador[1],buf);
+        oledWriteString(&ssoled[1], 0, 0, 5, (char *)buf, FONT_STRETCHED, 0, 1);
+      while (1){
+        ToHMS(segundosJugador[0],buf);
+        oledWriteString(&ssoled[1], 0, 0, 2, (char *)buf, FONT_STRETCHED, 0, 1);
+        ToHMS(segundosJugador[1],buf);
+        oledWriteString(&ssoled[1], 0, 0, 5, (char *)buf, FONT_STRETCHED, 0, 1);
+        if (digitalRead(4)== LOW){
+          if (mod == 0){
+            segundosJugador[0]++;
+          } else if (mod == 1){
+            segundosJugador[1]++;
+          }
+        }
+        if (digitalRead(5)== LOW){
+          if (mod == 0){
+            mod++;
+          } else if (mod == 1){
+            break;
+          }
+          else{
+            Serial.println("ERROR: parametro incorrecto");
+          }
+        }        
+        if (digitalRead(6)== LOW){
+          if (mod == 0){
+            segundosJugador[0]--;
+          } else if (mod == 1){
+            segundosJugador[1]--;
+          }
+        }
+      }
+        oledFill(&ssoled[0], 0, 1);
+        oledFill(&ssoled[1], 0, 1);
     } else {
         Serial.println("ERROR: parametro incorrecto");
     }
@@ -295,5 +335,9 @@ void loop() {
     if (digitalRead(4) == LOW) {
       Serial.println("Boton 4");
       timeSetting(1);
+    }
+    if (digitalRead(6) == LOW) {
+      Serial.println("Boton 4");
+      timeSetting(2);
     }
 }
