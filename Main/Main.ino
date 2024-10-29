@@ -16,15 +16,16 @@
 #define MY_OLED2 OLED_128x64
 
 #define PAUSE 3
+#define TIMEOUT 4
 
 SSOLED ssoled[2];
 
-unsigned long clock, segundos, ultimoclock;
+unsigned long clock, segundos, ultimoclock, millisMax;
 unsigned long segundosJugador[2];
 int bonus;
 int moves[2];     // Contadores de movimientos
 int player = PAUSE;
-bool botonPresionado[2];
+bool botonPresionado[2], timeout=false;
 
 struct persistente{
   unsigned long tiempo;
@@ -66,19 +67,30 @@ Serial.println(variableToString(persist.tiempo));
     pinMode(11, OUTPUT);
     pinMode(10, OUTPUT);
     pinMode(9, OUTPUT);
+    pinMode(8, OUTPUT);
     pinMode(2, INPUT_PULLUP);
     pinMode(3, INPUT_PULLUP);
     pinMode(4, INPUT_PULLUP);
     pinMode(5, INPUT_PULLUP);
     pinMode(6, INPUT_PULLUP);
+    pinMode(A0, INPUT);
     oledFill(&ssoled[0], 0, 1);
     oledFill(&ssoled[1], 0, 1);
+    digitalWrite(8, HIGH);
+    delay(25);
+    digitalWrite(8, LOW);
     timeSetting(0);
+}
+
+void beep(unsigned long time){
+  millisMax = millis()+time;
+  digitalWrite(8, HIGH);
+  Serial.println(millis()+"  "+millisMax);
 }
 
 void timeSetting(int type) {
     char buf[15];
-    if (type == 0) { // Initial setting when starting the clock
+    if (type == 0) { // I" "nitial setting when starting the clock
         oledFill(&ssoled[0], 0, 1);
         oledFill(&ssoled[1], 0, 1);
         oledWriteString(&ssoled[0], 0, 0, 0, (char *)"Confirm time settings", FONT_SMALL, 0, 1);
@@ -150,6 +162,7 @@ void timeSetting(int type) {
         segundosJugador[0]=persist.tiempo;
         segundosJugador[1]=segundosJugador[0];
         EEPROM.put(0,persist);
+        mod = 0;
     }else if (type==2){
       int mod = 0;
         oledFill(&ssoled[0], 0, 1);
@@ -194,6 +207,7 @@ void timeSetting(int type) {
       }
         oledFill(&ssoled[0], 0, 1);
         oledFill(&ssoled[1], 0, 1);
+        mod = 0;
     } else {
         Serial.println("ERROR: parametro incorrecto");
     }
@@ -245,7 +259,9 @@ char* ToHMS(unsigned long seg, char *buffer) {
 // Función para mostrar "Bonus" en la parte inferior izquierda de la pantalla
 void mostrarBonus() {
     if (bonus != 0) {
-        oledWriteString(&ssoled[1], 0, 0, 7, "bonus", FONT_SMALL, 0, 1);
+      //oledWriteString(&ssoled[1], 0, 0, 7, "bonus", FONT_SMALL, 0, 1);
+    } else{
+      oledWriteString(&ssoled[1], 0, 0, 7, "       ", FONT_SMALL, 0, 1);
     }
 }
 
@@ -255,14 +271,25 @@ void mostrarMovimientos(SSOLED *oled, int movimientos) {
 }
 
 void refrescaDisplay(SSOLED *pantalla, unsigned long segunds, int mov) {
+  if (player!=TIMEOUT){
     mostrarTiempoRestante(pantalla, segunds);  // Mostrar tiempo restante
     mostrarBonus();  // Mostrar "Bonus" en la pantalla del Jugador 1
     mostrarMovimientos(pantalla, mov);  // Mostrar movimientos del Jugador 1
+  }
+
 }
 
+
+
 void loop() {
+    char buf[15];
     clock = millis();
     segundos = clock / 1000;
+    variableToString((analogRead(0)/5)).toCharArray(buf, 15);
+    oledWriteString(&ssoled[0], 0, 0, 1, buf, FONT_SMALL, 0, 1);
+    if (clock > millisMax){
+      digitalWrite(8, LOW);
+    }
 
     if (clock > (ultimoclock + 999)) {
         ultimoclock = clock;
@@ -274,8 +301,15 @@ void loop() {
                 segundosJugador[0]--;
             }
             if (segundosJugador[0] == 0) {
-                digitalWrite(9, HIGH);
-                delay(500);
+              player=TIMEOUT;
+              beep(1000);
+              digitalWrite(9, HIGH);
+              //ToHMS(segundosJugador[1], buf);
+              sprintf(buf, ">00:00<");
+              oledWriteString(&ssoled[0], 0, 0, 3, (char *)buf, FONT_STRETCHED, 0, 1);
+            }
+            if (segundosJugador[0] <= 3) {
+              beep(25);
             }
             break;
 
@@ -285,13 +319,24 @@ void loop() {
                 segundosJugador[1]--;
             }
             if (segundosJugador[1] == 0) {
-                digitalWrite(10, HIGH);
-                delay(500);
+              player=TIMEOUT;
+              beep(1000);
+              digitalWrite(10, HIGH);
+              //ToHMS(segundosJugador[1], buf);
+              sprintf(buf, ">00:00<");
+              oledWriteString(&ssoled[1], 0, 0, 3, (char *)buf, FONT_STRETCHED, 0, 1);
+            }
+            if (segundosJugador[1] <= 3) {
+              beep(25);
             }
             break;
 
         case PAUSE:
             oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Pause", FONT_NORMAL, 0, 1);
+            break;
+
+        case TIMEOUT:
+            
             break;
 
         default:
@@ -306,25 +351,32 @@ void loop() {
 
     // Detectar el botón del Jugador 1
     if (digitalRead(2) == LOW && !botonPresionado[0] && (player == 0 || player == PAUSE)) {  
-        player = 1;  // Cambia al Jugador 2
-        segundosJugador[0] += bonus;  // Agregar bonus al Jugador 2
+
+        if(player!=PAUSE){
+            segundosJugador[0] += bonus;  // Agregar bonus al Jugador 2
+        }
         moves[0]++;  // Incrementar movimientos del Jugador 1
         botonPresionado[0] = true;
         Serial.println("Cambio a Jugador 2");
-    } else {
+        player = 1;  // Cambia al Jugador 2
+     } else {
         botonPresionado[0] = false;
     }
   
     // Detectar el botón del Jugador 2
     if (digitalRead(3) == LOW && !botonPresionado[1] && (player == 1 || player == PAUSE)) {  
+      if(player!=PAUSE){
+        segundosJugador[1] += bonus;
+      }
         player = 0;  // Cambia al Jugador 1
-        segundosJugador[1] += bonus;  // Agregar bonus al Jugador 1
+        //segundosJugador[1] += bonus;  // Agregar bonus al Jugador 1
         moves[1]++;  // Incrementar movimientos del Jugador 2
         botonPresionado[1] = true;
         Serial.println("Cambio a Jugador 1");
     } else {
         botonPresionado[1] = false;
     }
+
 
     // Detectar el botón del PAUSE
     if (digitalRead(5) == LOW) {
