@@ -39,9 +39,9 @@ void setup() {
     inutil = oledInit(&ssoled[0], MY_OLED1, OLED_ADDR, FLIP180, INVERT, 1, SDA_PIN, SCL_PIN, RESET_PIN, 400000L);
     inutil = oledInit(&ssoled[1], MY_OLED2, OLED_ADDR, FLIP180, INVERT, 0, GROVE_SDA_PIN, GROVE_SCL_PIN, RESET_PIN, 400000L);
   
-    Serial.begin(9600);
+    //Serial.begin(9600);
 
-   // EEPROM.get(0,persist);
+   EEPROM.get(0,persist);
 
  //   bonus=persist.bonus;
 
@@ -259,9 +259,9 @@ char* ToHMS(unsigned long seg, char *buffer) {
 // Función para mostrar "Bonus" en la parte inferior izquierda de la pantalla
 void mostrarBonus() {
     if (bonus != 0) {
-      //oledWriteString(&ssoled[1], 0, 0, 7, "bonus", FONT_SMALL, 0, 1);
+      oledWriteString(&ssoled[1], 0, 0, 0, "bonus", FONT_SMALL, 0, 1);
     } else{
-      oledWriteString(&ssoled[1], 0, 0, 7, "       ", FONT_SMALL, 0, 1);
+      oledWriteString(&ssoled[1], 0, 0, 0, "       ", FONT_SMALL, 0, 1);
     }
 }
 
@@ -271,22 +271,40 @@ void mostrarMovimientos(SSOLED *oled, int movimientos) {
 }
 
 void refrescaDisplay(SSOLED *pantalla, unsigned long segunds, int mov) {
+  char buf[20];
   if (player!=TIMEOUT){
     mostrarTiempoRestante(pantalla, segunds);  // Mostrar tiempo restante
     mostrarBonus();  // Mostrar "Bonus" en la pantalla del Jugador 1
     mostrarMovimientos(pantalla, mov);  // Mostrar movimientos del Jugador 1
   }
+    //String str=String("Battery: ")+String(2*(analogRead(0)*(5.0/1024.0)))+String("Vdc");
+    //str.toCharArray(buf,20);
+    //variableToString((analogRead(0)/5)).toCharArray(buf, 15);
+    //oledWriteString(&ssoled[0], 0, 0, 1, buf, FONT_SMALL, 0, 1);
+    //oledWriteString(&ssoled[0], 0, 12, 1, "   ", FONT_SMALL, 0, 1);
+    //oledWriteString(&ssoled[0], 0, 30, 1, buf, FONT_SMALL, 0, 1);
+    if ((2*(analogRead(0)*(5.0/1024.0))) < 5){
+      oledWriteString(&ssoled[1], 0, 60, 0, "     On USB", FONT_SMALL, 0, 1);
+    } else if ((2*(analogRead(0)*(5.0/1024.0))) < 7.4){
+      oledWriteString(&ssoled[1], 0, 60, 0, "Battery low", FONT_SMALL, 0, 1);
+    } else{
+      oledWriteString(&ssoled[1], 0, 60, 0, "            ", FONT_SMALL, 0, 1);
+    }
+    if (Serial){
+      //oledWriteString(&ssoled[0], 0, 0, 0, "ChessLink", FONT_SMALL, 0, 1);
+    } else{
+      oledWriteString(&ssoled[0], 0, 0, 0, "         ", FONT_SMALL, 0, 1);
+    }
+    
 
 }
 
 
 
 void loop() {
-    char buf[15];
+    char buf[20];
     clock = millis();
     segundos = clock / 1000;
-    variableToString((analogRead(0)/5)).toCharArray(buf, 15);
-    oledWriteString(&ssoled[0], 0, 0, 1, buf, FONT_SMALL, 0, 1);
     if (clock > millisMax){
       digitalWrite(8, LOW);
     }
@@ -296,7 +314,8 @@ void loop() {
 
         switch (player) {
         case 0:
-            oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Play ", FONT_NORMAL, 0, 1);
+            oledWriteString(&ssoled[0], 0, 0, 6, (char *)"<", FONT_STRETCHED, 0, 1);
+            oledWriteString(&ssoled[1], 0, 110, 6, (char *)" ", FONT_STRETCHED, 0, 1);
             if (segundosJugador[0] > 0) {
                 segundosJugador[0]--;
             }
@@ -314,7 +333,8 @@ void loop() {
             break;
 
         case 1:
-            oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Play ", FONT_NORMAL, 0, 1);
+            oledWriteString(&ssoled[1], 0, 110, 6, (char *)">", FONT_STRETCHED, 0, 1);
+            oledWriteString(&ssoled[0], 0, 0, 6, (char *)" ", FONT_STRETCHED, 0, 1);
             if (segundosJugador[1] > 0) {
                 segundosJugador[1]--;
             }
@@ -332,7 +352,8 @@ void loop() {
             break;
 
         case PAUSE:
-            oledWriteString(&ssoled[0], 0, 85, 7, (char *)"Pause", FONT_NORMAL, 0, 1);
+            oledWriteString(&ssoled[0], 0, 0, 6, (char *)" ", FONT_STRETCHED, 0, 1);
+            oledWriteString(&ssoled[1], 0, 110, 6, (char *)" ", FONT_STRETCHED, 0, 1);
             break;
 
         case TIMEOUT:
@@ -340,7 +361,7 @@ void loop() {
             break;
 
         default:
-            oledWriteString(&ssoled[0], 0, 85, 7, (char *)"ERROR", FONT_NORMAL, 0, 1);
+            oledWriteString(&ssoled[0], 0, 60, 7, (char *)"ERROR", FONT_NORMAL, 0, 1);
             Serial.println("Error: estado desconocido");
         }
 
