@@ -27,9 +27,11 @@ int moves[2];     // Contadores de movimientos
 int player = PAUSE;
 bool botonPresionado[2], timeout=false;
 
+
 struct persistente{
   unsigned long tiempo;
   unsigned long bonus;
+  bool beep;
 };
 
 persistente persist;
@@ -83,9 +85,11 @@ Serial.println(variableToString(persist.tiempo));
 }
 
 void beep(unsigned long time){
-  millisMax = millis()+time;
-  digitalWrite(8, HIGH);
-  Serial.println(millis()+"  "+millisMax);
+  if ((persist.beep)==false){
+    millisMax = millis()+time;
+    digitalWrite(8, HIGH);
+    Serial.println(millis()+"  "+millisMax);    
+  }
 }
 
 void timeSetting(int type) {
@@ -102,6 +106,7 @@ void timeSetting(int type) {
         oledWriteString(&ssoled[1], 0, 0, 2, (char *)buf, FONT_STRETCHED, 0, 1);
         ToHMS(bonus,buf);
         oledWriteString(&ssoled[1], 0, 0, 5, (char *)buf, FONT_STRETCHED, 0, 1);
+
       while (1) {
         if (digitalRead(5)== LOW){
           break;
@@ -116,6 +121,7 @@ void timeSetting(int type) {
       oledFill(&ssoled[0], 0, 1);
       oledFill(&ssoled[1], 0, 1);
     } else if (type == 1) {
+      player = PAUSE;
       int mod = 0;
         oledFill(&ssoled[0], 0, 1);
         oledFill(&ssoled[1], 0, 1);
@@ -161,25 +167,28 @@ void timeSetting(int type) {
         oledFill(&ssoled[1], 0, 1);
         segundosJugador[0]=persist.tiempo;
         segundosJugador[1]=segundosJugador[0];
+        bonus = persist.bonus;
         EEPROM.put(0,persist);
         mod = 0;
     }else if (type==2){
       int mod = 0;
+      player = PAUSE;
         oledFill(&ssoled[0], 0, 1);
         oledFill(&ssoled[1], 0, 1);
         oledWriteString(&ssoled[0], 0, 0, 0, (char *)"Current game modif.", FONT_SMALL, 0, 1);
-        oledWriteString(&ssoled[0], 0, 0, 7, (char *)"PAUSE: next/conf.", FONT_NORMAL, 0, 1);
-        oledWriteString(&ssoled[0], 0, 0, 6, (char *)"+/-: modify", FONT_NORMAL, 0, 1);
-        oledWriteString(&ssoled[1], 0, 10, 0, (char *)"Player 1/Player 2", FONT_SMALL, 0, 1);
+        oledWriteString(&ssoled[1], 0, 0, 7, (char *)"PAUSE: next/conf.", FONT_NORMAL, 0, 1);
+        oledWriteString(&ssoled[0], 0, 0, 7, (char *)"+/-: modify", FONT_NORMAL, 0, 1);
+        oledWriteString(&ssoled[0], 0, 30, 5, (char *)"Player 1", FONT_SMALL, 0, 1);
+        oledWriteString(&ssoled[1], 0, 30, 5, (char *)"Player 2", FONT_SMALL, 0, 1);
         ToHMS(segundosJugador[0],buf);
-        oledWriteString(&ssoled[1], 0, 0, 2, (char *)buf, FONT_STRETCHED, 0, 1);
+        oledWriteString(&ssoled[0], 0, 0, 3, (char *)buf, FONT_STRETCHED, 0, 1);
         ToHMS(segundosJugador[1],buf);
-        oledWriteString(&ssoled[1], 0, 0, 5, (char *)buf, FONT_STRETCHED, 0, 1);
+        oledWriteString(&ssoled[1], 0, 0, 3, (char *)buf, FONT_STRETCHED, 0, 1);
       while (1){
         ToHMS(segundosJugador[0],buf);
-        oledWriteString(&ssoled[1], 0, 0, 2, (char *)buf, FONT_STRETCHED, 0, 1);
+        oledWriteString(&ssoled[0], 0, 0, 3, (char *)buf, FONT_STRETCHED, 0, 1);
         ToHMS(segundosJugador[1],buf);
-        oledWriteString(&ssoled[1], 0, 0, 5, (char *)buf, FONT_STRETCHED, 0, 1);
+        oledWriteString(&ssoled[1], 0, 0, 3, (char *)buf, FONT_STRETCHED, 0, 1);
         if (digitalRead(4)== LOW){
           if (mod == 0){
             segundosJugador[0]++;
@@ -261,13 +270,23 @@ void mostrarBonus() {
     if (bonus != 0) {
       oledWriteString(&ssoled[1], 0, 0, 0, "bonus", FONT_SMALL, 0, 1);
     } else{
-      oledWriteString(&ssoled[1], 0, 0, 0, "       ", FONT_SMALL, 0, 1);
+      oledWriteString(&ssoled[1], 0, 0, 0, "      ", FONT_SMALL, 0, 1);
     }
 }
 
 // Función para mostrar movimientos
-void mostrarMovimientos(SSOLED *oled, int movimientos) {
-    //oledWriteString(oled, 0, 0, 0, (char *)("Moves: " + variableToString(movimientos)).c_str(), FONT_NORMAL, 0, 1);
+void mostrarMovimientos() {
+    int movimientos;
+    if (moves[0]>moves[1]){
+      movimientos = moves[0];
+      coldisplay(0);
+    }else if (moves[0]<moves[1]){
+      movimientos = moves[1];
+      coldisplay(1);
+    } else {
+      oledWriteString(&ssoled[0], 0, 50, 0, (char *)"ERROR", FONT_NORMAL, 0, 1);
+    }
+    oledWriteString(&ssoled[0], 0, 50, 0, (char *)("Moves: " + variableToString(movimientos)).c_str(), FONT_NORMAL, 0, 1);
 }
 
 void refrescaDisplay(SSOLED *pantalla, unsigned long segunds, int mov) {
@@ -275,34 +294,45 @@ void refrescaDisplay(SSOLED *pantalla, unsigned long segunds, int mov) {
   if (player!=TIMEOUT){
     mostrarTiempoRestante(pantalla, segunds);  // Mostrar tiempo restante
     mostrarBonus();  // Mostrar "Bonus" en la pantalla del Jugador 1
-    mostrarMovimientos(pantalla, mov);  // Mostrar movimientos del Jugador 1
+    mostrarMovimientos();  // Mostrar movimientos del Jugador 1
   }
-    //String str=String("Battery: ")+String(2*(analogRead(0)*(5.0/1024.0)))+String("Vdc");
-    //str.toCharArray(buf,20);
-    //variableToString((analogRead(0)/5)).toCharArray(buf, 15);
-    //oledWriteString(&ssoled[0], 0, 0, 1, buf, FONT_SMALL, 0, 1);
-    //oledWriteString(&ssoled[0], 0, 12, 1, "   ", FONT_SMALL, 0, 1);
-    //oledWriteString(&ssoled[0], 0, 30, 1, buf, FONT_SMALL, 0, 1);
-    if ((2*(analogRead(0)*(5.0/1024.0))) < 5){
-      oledWriteString(&ssoled[1], 0, 60, 0, "     On USB", FONT_SMALL, 0, 1);
-    } else if ((2*(analogRead(0)*(5.0/1024.0))) < 7.4){
+    /*String str=String("Battery: ")+String(2*(analogRead(0)*(5.0/1024.0)))+String("Vdc");
+    str.toCharArray(buf,20);
+    variableToString((analogRead(0)/5)).toCharArray(buf, 15);
+    oledWriteString(&ssoled[0], 0, 0, 1, buf, FONT_SMALL, 0, 1);
+    oledWriteString(&ssoled[0], 0, 12, 1, "   ", FONT_SMALL, 0, 1);
+    oledWriteString(&ssoled[0], 0, 30, 1, buf, FONT_SMALL, 0, 1);*/
+    if (Serial){
+      //oledWriteString(&ssoled[0], 0, 0, 0, "ChessLink", FONT_SMALL, 0, 1);
+    }
+    if ((2*(analogRead(0)*(5.0/1024.0))) < 7.4){
       oledWriteString(&ssoled[1], 0, 60, 0, "Battery low", FONT_SMALL, 0, 1);
+    } else if ((2*(analogRead(0)*(5.0/1024.0))) < 5){
+      oledWriteString(&ssoled[1], 0, 60, 0, "     On USB", FONT_SMALL, 0, 1);
     } else{
       oledWriteString(&ssoled[1], 0, 60, 0, "            ", FONT_SMALL, 0, 1);
     }
-    if (Serial){
-      //oledWriteString(&ssoled[0], 0, 0, 0, "ChessLink", FONT_SMALL, 0, 1);
-    } else{
-      oledWriteString(&ssoled[0], 0, 0, 0, "         ", FONT_SMALL, 0, 1);
-    }
-    
-
 }
 
-
+void coldisplay(int type){
+  if (type == 0){
+    oledWriteString(&ssoled[0], 0, 95, 7, (char *)"White", FONT_SMALL, 0, 1);
+    oledWriteString(&ssoled[1], 0, 0, 7, (char *)"Black", FONT_SMALL, 0, 1);
+  } else if (type == 1){
+    oledWriteString(&ssoled[0], 0, 95, 7, (char *)"Black", FONT_SMALL, 0, 1);
+    oledWriteString(&ssoled[1], 0, 0, 7, (char *)"White", FONT_SMALL, 0, 1);
+  }
+}
 
 void loop() {
     char buf[20];
+    if (moves[0]==moves[1]){
+      if (moves[0]==0){
+        oledWriteString(&ssoled[0], 0, 95, 7, (char *)"White", FONT_SMALL, 0, 1);
+        oledWriteString(&ssoled[1], 0, 0, 7, (char *)"Black", FONT_SMALL, 0, 1);
+      }
+
+    }
     clock = millis();
     segundos = clock / 1000;
     if (clock > millisMax){
@@ -375,8 +405,9 @@ void loop() {
 
         if(player!=PAUSE){
             segundosJugador[0] += bonus;  // Agregar bonus al Jugador 2
+            moves[0]++;  // Incrementar movimientos del Jugador 1
         }
-        moves[0]++;  // Incrementar movimientos del Jugador 1
+        
         botonPresionado[0] = true;
         Serial.println("Cambio a Jugador 2");
         player = 1;  // Cambia al Jugador 2
@@ -388,10 +419,10 @@ void loop() {
     if (digitalRead(3) == LOW && !botonPresionado[1] && (player == 1 || player == PAUSE)) {  
       if(player!=PAUSE){
         segundosJugador[1] += bonus;
+        moves[1]++;  // Incrementar movimientos del Jugador 1
       }
         player = 0;  // Cambia al Jugador 1
         //segundosJugador[1] += bonus;  // Agregar bonus al Jugador 1
-        moves[1]++;  // Incrementar movimientos del Jugador 2
         botonPresionado[1] = true;
         Serial.println("Cambio a Jugador 1");
     } else {
