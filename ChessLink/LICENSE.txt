@@ -1,0 +1,6 @@
+By using this software you agree to the following:
++ You shall not use this software for encrypting sensitive data. If you do, the author isn't responsible for any damages, data leakages, etc.
++ You must not use the program for any commercial purpose without consent of the creator
++ You compromise to report any vulnerability of the code to the creator, via the GitHub issues page of the official repoç
++ You agree to not decompile, modify and/or reverse-engineer the final .EXE file
++ You are aware that these conditions may change without warning

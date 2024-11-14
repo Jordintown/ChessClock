@@ -14,7 +14,6 @@
 #define USE_HW_I2C 0
 #define MY_OLED1 OLED_128x64
 #define MY_OLED2 OLED_128x64
-
 #define PAUSE 3
 #define TIMEOUT 4
 
@@ -23,9 +22,10 @@ SSOLED ssoled[2];
 unsigned long clock, segundos, ultimoclock, millisMax;
 unsigned long segundosJugador[2];
 int bonus;
-int moves[2];     // Contadores de movimientos
+int moves[2]; 
+int movimientos;    // Contadores de movimientos
 int player = PAUSE;
-bool botonPresionado[2], timeout=false;
+bool botonPresionado[2], timeout=false, link=false;
 
 
 struct persistente{
@@ -41,7 +41,7 @@ void setup() {
     inutil = oledInit(&ssoled[0], MY_OLED1, OLED_ADDR, FLIP180, INVERT, 1, SDA_PIN, SCL_PIN, RESET_PIN, 400000L);
     inutil = oledInit(&ssoled[1], MY_OLED2, OLED_ADDR, FLIP180, INVERT, 0, GROVE_SDA_PIN, GROVE_SCL_PIN, RESET_PIN, 400000L);
   
-    //Serial.begin(9600);
+    Serial.begin(9600);
 
    EEPROM.get(0,persist);
 
@@ -51,37 +51,35 @@ void setup() {
 //persist.bonus=1;
 
 EEPROM.get(0,persist);
-Serial.println(variableToString(persist.bonus));
-Serial.println(variableToString(persist.tiempo));
+//Serial.println(variableToString(persist.bonus));
+//Serial.println(variableToString(persist.tiempo));
 
-    for(int i = 0; i < 2; i++) {
-
-          segundosJugador[i] = persist.tiempo;
-          bonus = persist.bonus;
-        
-        moves[i] = 0;
-        botonPresionado[i] = 0;
-        oledFill(&ssoled[i], 0, 1);
-    }  
-    ultimoclock = 0;
-
-    pinMode(12, OUTPUT);
-    pinMode(11, OUTPUT);
-    pinMode(10, OUTPUT);
-    pinMode(9, OUTPUT);
-    pinMode(8, OUTPUT);
-    pinMode(2, INPUT_PULLUP);
-    pinMode(3, INPUT_PULLUP);
-    pinMode(4, INPUT_PULLUP);
-    pinMode(5, INPUT_PULLUP);
-    pinMode(6, INPUT_PULLUP);
-    pinMode(A0, INPUT);
-    oledFill(&ssoled[0], 0, 1);
-    oledFill(&ssoled[1], 0, 1);
-    digitalWrite(8, HIGH);
-    delay(25);
-    digitalWrite(8, LOW);
-    timeSetting(0);
+  for(int i = 0; i < 2; i++) {
+       segundosJugador[i] = persist.tiempo;
+        bonus = persist.bonus;
+      
+      moves[i] = 0;
+      botonPresionado[i] = 0;
+      oledFill(&ssoled[i], 0, 1);
+  }  
+  ultimoclock = 0;
+  pinMode(12, OUTPUT);
+  pinMode(11, OUTPUT);
+  pinMode(10, OUTPUT);
+  pinMode(9, OUTPUT);
+  pinMode(8, OUTPUT);
+  pinMode(2, INPUT_PULLUP);
+  pinMode(3, INPUT_PULLUP);
+  pinMode(4, INPUT_PULLUP);
+  pinMode(5, INPUT_PULLUP);
+  pinMode(6, INPUT_PULLUP);
+  pinMode(A0, INPUT);
+  oledFill(&ssoled[0], 0, 1);
+  oledFill(&ssoled[1], 0, 1);
+  digitalWrite(8, HIGH);
+  delay(25);
+  digitalWrite(8, LOW);
+  timeSetting(0);
 }
 
 void beep(unsigned long time){
@@ -170,6 +168,8 @@ void timeSetting(int type) {
         bonus = persist.bonus;
         EEPROM.put(0,persist);
         mod = 0;
+        moves[0] = 0;
+        moves[1] = 0;
     }else if (type==2){
       int mod = 0;
       player = PAUSE;
@@ -276,7 +276,6 @@ void mostrarBonus() {
 
 // Función para mostrar movimientos
 void mostrarMovimientos() {
-    int movimientos;
     if (moves[0]>moves[1]){
       movimientos = moves[0];
       coldisplay(0);
@@ -284,7 +283,7 @@ void mostrarMovimientos() {
       movimientos = moves[1];
       coldisplay(1);
     } else {
-      oledWriteString(&ssoled[0], 0, 50, 0, (char *)"ERROR", FONT_NORMAL, 0, 1);
+
     }
     oledWriteString(&ssoled[0], 0, 50, 0, (char *)("Moves: " + variableToString(movimientos)).c_str(), FONT_NORMAL, 0, 1);
 }
@@ -302,13 +301,15 @@ void refrescaDisplay(SSOLED *pantalla, unsigned long segunds, int mov) {
     oledWriteString(&ssoled[0], 0, 0, 1, buf, FONT_SMALL, 0, 1);
     oledWriteString(&ssoled[0], 0, 12, 1, "   ", FONT_SMALL, 0, 1);
     oledWriteString(&ssoled[0], 0, 30, 1, buf, FONT_SMALL, 0, 1);*/
-    if (Serial){
+    if (link=true){
       //oledWriteString(&ssoled[0], 0, 0, 0, "ChessLink", FONT_SMALL, 0, 1);
+    } else {
+      //oledWriteString(&ssoled[0], 0, 0, 0, "         ", FONT_SMALL, 0, 1);
     }
-    if ((2*(analogRead(0)*(5.0/1024.0))) < 7.4){
-      oledWriteString(&ssoled[1], 0, 60, 0, "Battery low", FONT_SMALL, 0, 1);
-    } else if ((2*(analogRead(0)*(5.0/1024.0))) < 5){
+    if ((2*(analogRead(0)*(5.0/1024.0))) < 5.2){
       oledWriteString(&ssoled[1], 0, 60, 0, "     On USB", FONT_SMALL, 0, 1);
+    } else if ((2*(analogRead(0)*(5.0/1024.0))) < 7.4){
+      oledWriteString(&ssoled[1], 0, 60, 0, "Battery low", FONT_SMALL, 0, 1);
     } else{
       oledWriteString(&ssoled[1], 0, 60, 0, "            ", FONT_SMALL, 0, 1);
     }
@@ -324,8 +325,65 @@ void coldisplay(int type){
   }
 }
 
+void workSerial(){
+if (Serial.available()) {
+    String command = Serial.readStringUntil('\n');  // Read incoming command
+
+    if (command == "FETCH") {
+      // Respond with all the data (separated by commas)
+      Serial.print(segundosJugador[0]);
+      Serial.print(",");
+      Serial.print(segundosJugador[1]);
+      Serial.print(",");
+      Serial.print(movimientos);
+    } 
+      if (command == "LINK-LOGON") {
+      // Send LOGON-CONFIRM back to the Python side
+      Serial.println("LOGON-CONFIRM");
+    }else if (command.startsWith("PLAYER1TIME")) {
+      // PUT command to set player 1 time
+      int newTime = command.substring(12).toInt();
+      segundosJugador[0] = newTime;
+      Serial.println("PLAYER 1 TIME set to " + String(newTime));
+    } 
+    else if (command.startsWith("PLAYER2TIME")) {
+      // PUT command to set player 2 time
+      int newTime = command.substring(12).toInt();
+      segundosJugador[1] = newTime;
+      Serial.println("PLAYER 2 TIME set to " + String(newTime));
+    } 
+    else if (command.startsWith("DEFTIME")) {
+      // PUT command to set default time
+      int newTime = command.substring(8).toInt();
+        persist.tiempo = newTime;
+        bonus = persist.tiempo;
+        EEPROM.put(0,persist);
+      Serial.println("DEFAULT time set to " + String(newTime));
+    } 
+    else if (command.startsWith("BONUS")) {
+      // PUT command to set bonus time
+      int newTime = command.substring(6).toInt();
+        persist.bonus = newTime;
+        bonus = persist.bonus;
+        EEPROM.put(0,persist);
+      Serial.println("BONUS set to " + String(newTime));
+    } 
+    else if (command == "PAUSE") {
+      player = PAUSE;
+    } 
+    else {
+      Serial.println("UNKNOWN COMMAND");
+    }
+  }
+}
 void loop() {
-    char buf[20];
+    workSerial();
+    char buf[40];
+    char slash = "/";
+    for (int i = 0; i < 2; i++) {
+      refrescaDisplay(&ssoled[i], segundosJugador[i], moves[i]);
+
+    }
     if (moves[0]==moves[1]){
       if (moves[0]==0){
         oledWriteString(&ssoled[0], 0, 95, 7, (char *)"White", FONT_SMALL, 0, 1);
@@ -395,9 +453,7 @@ void loop() {
             Serial.println("Error: estado desconocido");
         }
 
-        for (int i = 0; i < 2; i++) {
-            refrescaDisplay(&ssoled[i], segundosJugador[i], moves[i]);
-        }
+
     }
 
     // Detectar el botón del Jugador 1
@@ -409,7 +465,7 @@ void loop() {
         }
         
         botonPresionado[0] = true;
-        Serial.println("Cambio a Jugador 2");
+        //Serial.println("Cambio a Jugador 2");
         player = 1;  // Cambia al Jugador 2
      } else {
         botonPresionado[0] = false;
@@ -444,4 +500,5 @@ void loop() {
       Serial.println("Boton 4");
       timeSetting(2);
     }
+    //Serial.print(sprintf(buf, (ToHMS(segundosJugador[0]+slash+segundosJugador[1]+slash+movimientos+slash, buf))));
 }
