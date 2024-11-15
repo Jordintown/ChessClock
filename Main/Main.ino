@@ -21,6 +21,7 @@ SSOLED ssoled[2];
 
 unsigned long clock, segundos, ultimoclock, millisMax;
 unsigned long segundosJugador[2];
+unsigned long BigClock = 0;
 int bonus;
 int moves[2]; 
 int movimientos;    // Contadores de movimientos
@@ -114,6 +115,14 @@ void timeSetting(int type) {
         }
         if (digitalRead(6)== LOW){
           timeSetting(1);
+        }
+        if (Serial.available()) {
+          String command = Serial.readStringUntil('\n');
+          if (command == "LINK-LOGON") {
+          // Send LOGON-CONFIRM back to the Python side
+          Serial.println("LOGON-CONFIRM");
+          break;
+          }
         }
       }
       oledFill(&ssoled[0], 0, 1);
@@ -313,7 +322,9 @@ void refrescaDisplay(SSOLED *pantalla, unsigned long segunds, int mov) {
     } else{
       oledWriteString(&ssoled[1], 0, 60, 0, "            ", FONT_SMALL, 0, 1);
     }
+
 }
+
 
 void coldisplay(int type){
   if (type == 0){
@@ -325,59 +336,14 @@ void coldisplay(int type){
   }
 }
 
-void workSerial(){
-if (Serial.available()) {
-    String command = Serial.readStringUntil('\n');  // Read incoming command
-
-    if (command == "FETCH") {
-      // Respond with all the data (separated by commas)
-      Serial.print(segundosJugador[0]);
-      Serial.print(",");
-      Serial.print(segundosJugador[1]);
-      Serial.print(",");
-      Serial.print(movimientos);
-    } 
-      if (command == "LINK-LOGON") {
-      // Send LOGON-CONFIRM back to the Python side
-      Serial.println("LOGON-CONFIRM");
-    }else if (command.startsWith("PLAYER1TIME")) {
-      // PUT command to set player 1 time
-      int newTime = command.substring(12).toInt();
-      segundosJugador[0] = newTime;
-      Serial.println("PLAYER 1 TIME set to " + String(newTime));
-    } 
-    else if (command.startsWith("PLAYER2TIME")) {
-      // PUT command to set player 2 time
-      int newTime = command.substring(12).toInt();
-      segundosJugador[1] = newTime;
-      Serial.println("PLAYER 2 TIME set to " + String(newTime));
-    } 
-    else if (command.startsWith("DEFTIME")) {
-      // PUT command to set default time
-      int newTime = command.substring(8).toInt();
-        persist.tiempo = newTime;
-        bonus = persist.tiempo;
-        EEPROM.put(0,persist);
-      Serial.println("DEFAULT time set to " + String(newTime));
-    } 
-    else if (command.startsWith("BONUS")) {
-      // PUT command to set bonus time
-      int newTime = command.substring(6).toInt();
-        persist.bonus = newTime;
-        bonus = persist.bonus;
-        EEPROM.put(0,persist);
-      Serial.println("BONUS set to " + String(newTime));
-    } 
-    else if (command == "PAUSE") {
-      player = PAUSE;
-    } 
-    else {
-      Serial.println("UNKNOWN COMMAND");
-    }
-  }
+void SerialOvrd(){
+    Serial.print(segundosJugador[0]);
+    Serial.print(",");
+    Serial.print(segundosJugador[1]);
+    Serial.print(",");
+    Serial.println(movimientos);
 }
 void loop() {
-    workSerial();
     char buf[40];
     char slash = "/";
     for (int i = 0; i < 2; i++) {
@@ -396,8 +362,28 @@ void loop() {
     if (clock > millisMax){
       digitalWrite(8, LOW);
     }
+    if (Serial.available()) {
+ // unsigned long currentTime = millis();
+    String command = Serial.readStringUntil('\n');  // Read incoming command
+      if (command == "LINK-LOGON") {
+      // Send LOGON-CONFIRM back to the Python side
+      Serial.println("LOGON-CONFIRM");
+    }  //if (currentTime - lastUpdateTime >= 250) {
+    //lastUpdateTime = currentTime;
 
+    // Simulate player times (in seconds)
+    int player1Time = segundosJugador[0]; // Replace with actual logic
+    int player2Time = segundosJugador[1];
+
+    // Send formatted data: player1_time,player2_time
+
+  }
     if (clock > (ultimoclock + 999)) {
+    Serial.print(segundosJugador[0]);
+    Serial.print(",");
+    Serial.print(segundosJugador[1]);
+    Serial.print(",");
+    Serial.println(movimientos);
         ultimoclock = clock;
 
         switch (player) {
@@ -458,7 +444,7 @@ void loop() {
 
     // Detectar el botón del Jugador 1
     if (digitalRead(2) == LOW && !botonPresionado[0] && (player == 0 || player == PAUSE)) {  
-
+      SerialOvrd();
         if(player!=PAUSE){
             segundosJugador[0] += bonus;  // Agregar bonus al Jugador 2
             moves[0]++;  // Incrementar movimientos del Jugador 1
@@ -473,6 +459,7 @@ void loop() {
   
     // Detectar el botón del Jugador 2
     if (digitalRead(3) == LOW && !botonPresionado[1] && (player == 1 || player == PAUSE)) {  
+      SerialOvrd();
       if(player!=PAUSE){
         segundosJugador[1] += bonus;
         moves[1]++;  // Incrementar movimientos del Jugador 1
@@ -480,7 +467,7 @@ void loop() {
         player = 0;  // Cambia al Jugador 1
         //segundosJugador[1] += bonus;  // Agregar bonus al Jugador 1
         botonPresionado[1] = true;
-        Serial.println("Cambio a Jugador 1");
+        //Serial.println("Cambio a Jugador 1");
     } else {
         botonPresionado[1] = false;
     }
@@ -500,5 +487,4 @@ void loop() {
       Serial.println("Boton 4");
       timeSetting(2);
     }
-    //Serial.print(sprintf(buf, (ToHMS(segundosJugador[0]+slash+segundosJugador[1]+slash+movimientos+slash, buf))));
 }
