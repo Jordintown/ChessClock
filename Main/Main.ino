@@ -42,10 +42,15 @@ void setup() {
   int inutil;
   inutil = oledInit(&ssoled[0], MY_OLED1, OLED_ADDR, FLIP180, INVERT, 1, SDA_PIN, SCL_PIN, RESET_PIN, 400000L);
   inutil = oledInit(&ssoled[1], MY_OLED2, OLED_ADDR, FLIP180, INVERT, 0, GROVE_SDA_PIN, GROVE_SCL_PIN, RESET_PIN, 400000L);
-
+  oledFill(&ssoled[0], 0, 1);
+  oledFill(&ssoled[1], 0, 1);
   Serial.begin(9600);
 
   EEPROM.get(0, persist);
+  oledWriteString(&ssoled[0], 0, 0, 3, (char *)"Self test in progress", FONT_SMALL, 0, 1);
+  oledWriteString(&ssoled[0], 0, 30, 4, (char *)"(max. 3s)", FONT_SMALL, 0, 1);
+  oledWriteString(&ssoled[1], 0, 0, 3, (char *)"Self test in progress", FONT_SMALL, 0, 1);
+  oledWriteString(&ssoled[1], 0, 30, 4, (char *)"(max. 3s)", FONT_SMALL, 0, 1);
 
   //   bonus=persist.bonus;
 
@@ -92,7 +97,6 @@ void beep(long time) {
   if ((persist.beep) == 1) {
     millisMax = millis() + time;
     digitalWrite(7, HIGH);
-    Serial.println(millis() + "  " + millisMax);
   }
 }
 
@@ -346,7 +350,7 @@ void mostrarBonus() {
 // Función para mostrar movimientos
 void mostrarMovimientos() {
   oledWriteString(&ssoled[0], 0, 93, 6, (char *)"Moves:", FONT_SMALL, 0, 1);
-  oledWriteString(&ssoled[0], 0, 100, 7, (char *)variableToString(moves[0]).c_str(), FONT_NORMAL, 0, 1);
+  oledWriteString(&ssoled[0], 0, 95, 7, (char *)variableToString(moves[0]).c_str(), FONT_NORMAL, 0, 1);
   oledWriteString(&ssoled[1], 0, 0, 6, (char *)"Moves:", FONT_SMALL, 0, 1);
   oledWriteString(&ssoled[1], 0, 0, 7, (char *)variableToString(moves[1]).c_str(), FONT_NORMAL, 0, 1);
 }
