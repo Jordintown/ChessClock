@@ -17,6 +17,8 @@
 #define PAUSE 3
 #define TIMEOUT 4
 
+#define TAM_MUESTREO_BAT 20
+
 SSOLED ssoled[2];
 
 //unsigned long milisegundos;
@@ -27,6 +29,7 @@ unsigned int bonus;
 unsigned int moves[2];
 unsigned int movimientos;  // Contadores de movimientos
 unsigned int player = PAUSE;
+unsigned int dVbat[TAM_MUESTREO_BAT], muestraBat;
 int boton=0;
 bool botonPresionado[2], timeout = false, link = false, displayed = false;
 
@@ -48,19 +51,15 @@ void setup() {
   oledWriteString(&ssoled[0], 0, 0, 3, (char *)"Self test in progress", FONT_SMALL, 0, 1);
   oledWriteString(&ssoled[0], 0, 20, 4, (char *)"(Max. 3 seconds)", FONT_SMALL, 0, 1);
   oledWriteString(&ssoled[1], 0, 0, 3, (char *)"Self test in progress", FONT_SMALL, 0, 1);
-  oledWriteString(&ssoled[0], 0, 20, 4, (char *)"(Max. 3 seconds)", FONT_SMALL, 0, 1);
+  oledWriteString(&ssoled[1], 0, 20, 4, (char *)"(Max. 3 seconds)", FONT_SMALL, 0, 1);
+
+  for(muestraBat=0;muestraBat<TAM_MUESTREO_BAT;muestraBat++){
+    dVbat[muestraBat]=75;
+  }
+
   Serial.begin(9600);
 
   EEPROM.get(0, persist);
-
-  //   bonus=persist.bonus;
-
-  //persist.tiempo=600;
-  //persist.bonus=1;
-
-  EEPROM.get(0, persist);
-  //Serial.println(variableToString(persist.bonus));
-  //Serial.println(variableToString(persist.tiempo));
 
   for (int i = 0; i < 2; i++) {
     segundosJugador[i] = persist.tiempo;
@@ -99,6 +98,30 @@ void beep(long time) {
     millisMax = millis() + time;
     digitalWrite(7, HIGH);
   }
+}
+
+void muestreoBat(){
+  if(muestraBat>=TAM_MUESTREO_BAT){
+    muestraBat=0;
+  }
+  dVbat[muestraBat++]=(int)((analogRead(0) + 80.) / 10.2);
+}
+
+float consultaBatV(){
+  unsigned long acumulador=0;
+  for(int i=0;i<TAM_MUESTREO_BAT;i++){
+    acumulador+=dVbat[i];
+  }
+ // Serial.println(((float)(acumulador/TAM_MUESTREO_BAT))/10.0);
+  return ((float)(acumulador/TAM_MUESTREO_BAT))/10.0;
+}
+
+float consultaBatPercent(){
+  float resultat=(consultaBatV() - 6.6) * 62.5;
+  if (resultat < 0.) { resultat = 0.; }
+  if (resultat >= 100.) { resultat = 100.; }
+  return resultat;
+  //(volts - 6.6) * 62.5
 }
 
 void timeSetting(int type) {
@@ -377,16 +400,20 @@ void refrescaDisplay(SSOLED *pantalla, unsigned long segunds) {
     oledWriteString(&ssoled[0], 0, 30, 1, buf, FONT_SMALL, 0, 1);*/
   if (link == true) {
     oledWriteString(&ssoled[1], 0, 60, 0, "  ChessLink", FONT_SMALL, 0, 1);
+  } else {
+    oledWriteString(&ssoled[1], 0, 60, 0, "           ", FONT_SMALL, 0, 1);
   }
+
+  muestreoBat();
   //      if ((2*(analogRead(0)*(5.0/1024.0))) < 5.2){
-  float volts = ((analogRead(0) + 80) / 102.);
-  float percent = (volts - 6.6) * 62.5;
-  if (percent < 0) { percent = 0.; }
-  if (percent > 99) { percent = 100.; }
+//  float volts = ((analogRead(0) + 80) / 102.);
+//  float percent = (volts - 6.6) * 62.5;
+  float percent=consultaBatPercent();
   String texto = String((int)percent);
   texto = "Bat: " + texto + "%  ";
   texto.toCharArray(buf, 15);
   oledWriteString(&ssoled[0], 0, 70, 0, buf, FONT_SMALL, 0, 1);
+  //Serial.println(percent);
 }
 
 void SerialOvrd() {
