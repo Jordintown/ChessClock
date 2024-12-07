@@ -363,11 +363,11 @@ void mostrarBonus() {
   int inc = bonus;
   if (bonus != 0) {
     String texto = String((int)inc);
-    texto = "Bonus (" + texto + ")";
+    texto = "Fisher (" + texto + ")";
     texto.toCharArray(buf, 25);
     oledWriteString(&ssoled[1], 0, 0, 0, buf, FONT_SMALL, 0, 1);
   } else {
-    oledWriteString(&ssoled[1], 0, 0, 0, "      ", FONT_SMALL, 0, 1);
+    oledWriteString(&ssoled[1], 0, 0, 0, "         ", FONT_SMALL, 0, 1);
   }
 }
 
@@ -420,9 +420,11 @@ void SerialOvrd() {
   if (link == true) {
     Serial.print(segundosJugador[0]);
     Serial.print(",");
+    Serial.print(moves[0]);
+    Serial.print(",");
     Serial.print(segundosJugador[1]);
     Serial.print(",");
-    Serial.println(movimientos);
+    Serial.println(moves[1]);
   }
 }
 void ToggleBeep() {
@@ -605,9 +607,11 @@ void loop() {
     if (link == true) {
       Serial.print(segundosJugador[0]);
       Serial.print(",");
+      Serial.print(moves[0]);
+      Serial.print(",");
       Serial.print(segundosJugador[1]);
       Serial.print(",");
-      Serial.println(movimientos);
+      Serial.println(moves[1]);
     }
     ultimoclock = clock;
 
