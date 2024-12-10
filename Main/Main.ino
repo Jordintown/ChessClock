@@ -3,21 +3,21 @@
 #include <ss_oled.h>
 #include <EEPROM.h>
 
-#define GROVE_SDA_PIN A2
-#define GROVE_SCL_PIN A3
-#define SDA_PIN A4
-#define SCL_PIN A5
-#define RESET_PIN -1
-#define OLED_ADDR -1
-#define FLIP180 0
-#define INVERT 0
-#define USE_HW_I2C 0
-#define MY_OLED1 OLED_128x64
-#define MY_OLED2 OLED_128x64
+//static code legibility defs
 #define PAUSE 3
 #define TIMEOUT 4
 
-#define TAM_MUESTREO_BAT 20
+//config vars
+#define TAM_MUESTREO_BAT 15
+#define ALLOW_COUNTDOWN 1
+
+#define FIRST_PHASE_TIME 600
+#define FIRST_PHASE_BONUS 60
+#define FIRST_PHASE_TRIGGER -1 //5
+
+#define SEC_PHASE_TIME 1200
+#define SEC_PHASE_BONUS 120
+#define SEC_PHASE_TRIGGER -1 //10
 
 SSOLED ssoled[2];
 
@@ -30,22 +30,30 @@ unsigned int moves[2];
 unsigned int movimientos;  // Contadores de movimientos
 unsigned int player = PAUSE;
 unsigned int dVbat[TAM_MUESTREO_BAT], muestraBat;
+unsigned int gamePhase[2];
 int boton=0;
 bool botonPresionado[2], timeout = false, link = false, displayed = false;
+//temp declarations to be moved somewhere else
+unsigned int phaseTrigger[2];
+unsigned long phaseTime[2];
+unsigned int phaseBonus[2];
 
 
 struct persistente {
   unsigned long tiempo;
   unsigned long bonus;
-  int beep;
+  unsigned int beep;
+  /*unsigned int phaseTrigger[2];
+unsigned long phaseTime[2];
+unsigned int phaseBonus[2];*/
 };
 
 persistente persist;
 
 void setup() {
   int inutil;
-  inutil = oledInit(&ssoled[0], MY_OLED1, OLED_ADDR, FLIP180, INVERT, 1, SDA_PIN, SCL_PIN, RESET_PIN, 400000L);
-  inutil = oledInit(&ssoled[1], MY_OLED2, OLED_ADDR, FLIP180, INVERT, 0, GROVE_SDA_PIN, GROVE_SCL_PIN, RESET_PIN, 400000L);
+  inutil = oledInit(&ssoled[0], OLED_128x64, -1, 0, 0, 1, A4, A5, -1, 400000L);
+  inutil = oledInit(&ssoled[1], OLED_128x64, -1, 0, 0, 0, A2, A3, -1, 400000L);
   oledFill(&ssoled[0], 0, 1);
   oledFill(&ssoled[1], 0, 1);
   oledWriteString(&ssoled[0], 0, 0, 3, (char *)"Self test in progress", FONT_SMALL, 0, 1);
@@ -56,7 +64,12 @@ void setup() {
   for(muestraBat=0;muestraBat<TAM_MUESTREO_BAT;muestraBat++){
     dVbat[muestraBat]=75;
   }
-
+  phaseTrigger[0]=FIRST_PHASE_TRIGGER;
+  phaseTrigger[1]=SEC_PHASE_TRIGGER;
+  phaseTime[0]=FIRST_PHASE_TIME;
+  phaseTime[1]=SEC_PHASE_TIME;
+  phaseBonus[0]=FIRST_PHASE_BONUS;
+  phaseBonus[1]=SEC_PHASE_BONUS;
   Serial.begin(9600);
 
   EEPROM.get(0, persist);
@@ -64,7 +77,6 @@ void setup() {
   for (int i = 0; i < 2; i++) {
     segundosJugador[i] = persist.tiempo;
     bonus = persist.bonus;
-
     moves[i] = 0;
     botonPresionado[i] = 0;
     oledFill(&ssoled[i], 0, 1);
@@ -363,7 +375,7 @@ void mostrarBonus() {
   int inc = bonus;
   if (bonus != 0) {
     String texto = String((int)inc);
-    texto = "Fisher (" + texto + ")";
+    texto = "Bonus +" + texto + "";
     texto.toCharArray(buf, 25);
     oledWriteString(&ssoled[1], 0, 0, 0, buf, FONT_SMALL, 0, 1);
   } else {
@@ -372,11 +384,17 @@ void mostrarBonus() {
 }
 
 // Función para mostrar movimientos
-void mostrarMovimientos() {
+void mostrarEstado() {
+
   oledWriteString(&ssoled[0], 0, 93, 6, (char *)"Moves:", FONT_SMALL, 0, 1);
   oledWriteString(&ssoled[0], 0, 100, 7, (char *)variableToString(moves[0]).c_str(), FONT_NORMAL, 0, 1);
   oledWriteString(&ssoled[1], 0, 0, 6, (char *)"Moves:", FONT_SMALL, 0, 1);
   oledWriteString(&ssoled[1], 0, 0, 7, (char *)variableToString(moves[1]).c_str(), FONT_NORMAL, 0, 1);
+  //
+  oledWriteString(&ssoled[0], 0, 53, 6, (char *)"Phase:", FONT_SMALL, 0, 1);
+  oledWriteString(&ssoled[0], 0, 53, 7, (char *)variableToString(gamePhase[0]).c_str(), FONT_NORMAL, 0, 1);
+  oledWriteString(&ssoled[1], 0, 40, 6, (char *)"Phase:", FONT_SMALL, 0, 1);
+  oledWriteString(&ssoled[1], 0, 40, 7, (char *)variableToString(gamePhase[1]).c_str(), FONT_NORMAL, 0, 1);
 }
 
 void refrescaDisplay(SSOLED *pantalla, unsigned long segunds) {
@@ -384,7 +402,7 @@ void refrescaDisplay(SSOLED *pantalla, unsigned long segunds) {
   if (player != TIMEOUT) {
     mostrarTiempoRestante(pantalla, segunds);  // Mostrar tiempo restante
     mostrarBonus();                            // Mostrar "Bonus" en la pantalla del Jugador 1
-    mostrarMovimientos();                      // Mostrar movimientos del Jugador 1
+    mostrarEstado();                      // Mostrar movimientos del Jugador 1
   }
   if (persist.beep == 1) {
     oledWriteString(&ssoled[0], 0, 0, 0, "         ", FONT_SMALL, 0, 1);
@@ -490,7 +508,7 @@ void CambiaEstado(){ // cambia el estado del reloj segun el boton pulsado
           oledWriteString(&ssoled[0], 0, 0, 6, (char *)" ", FONT_STRETCHED, 0, 1);
           oledWriteString(&ssoled[1], 0, 110, 6, (char *)">", FONT_STRETCHED, 0, 1);
           refrescaDisplay(&ssoled[0], segundosJugador[0]);
-
+          phaseWork(0);
         player=1;
       break;
     }
@@ -502,7 +520,6 @@ void CambiaEstado(){ // cambia el estado del reloj segun el boton pulsado
           SerialOvrd();
           oledWriteString(&ssoled[0], 0, 0, 6, (char *)"<", FONT_STRETCHED, 0, 1);
           oledWriteString(&ssoled[1], 0, 110, 6, (char *)" ", FONT_STRETCHED, 0, 1);
-
         player=0;
       break;
       case 1:         // turno de P2
@@ -513,8 +530,7 @@ void CambiaEstado(){ // cambia el estado del reloj segun el boton pulsado
           oledWriteString(&ssoled[0], 0, 0, 6, (char *)"<", FONT_STRETCHED, 0, 1);
           oledWriteString(&ssoled[1], 0, 110, 6, (char *)" ", FONT_STRETCHED, 0, 1);
           refrescaDisplay(&ssoled[1], segundosJugador[1]);
-
-
+          phaseWork(1);
         player=0;
       break;
     }
@@ -552,6 +568,19 @@ void CambiaEstado(){ // cambia el estado del reloj segun el boton pulsado
     }
     break;
   }
+}
+
+void phaseWork(unsigned int player){
+  if (moves[player]==FIRST_PHASE_TRIGGER){
+    segundosJugador[player]+=10*phaseTime[0];
+    bonus=phaseBonus[0];
+    gamePhase[0];
+  } if (moves[player]==SEC_PHASE_TRIGGER){
+    segundosJugador[player]+=10*phaseTime[1];
+    bonus=phaseBonus[1];
+    gamePhase[1];
+  }
+refrescaDisplay(&ssoled[player], segundosJugador[player]);
 }
 
 void serialSys(){
@@ -619,7 +648,7 @@ void loop() {
 
     switch (player) {
       case 0:
-        if (segundosJugador[0] > 0) {
+        if (segundosJugador[0] > 0 && ALLOW_COUNTDOWN==1) {
           segundosJugador[0]--;
         }
         if (segundosJugador[0] == 0) {
@@ -637,7 +666,7 @@ void loop() {
         break;
 
       case 1:
-        if (segundosJugador[1] > 0) {
+        if (segundosJugador[1] > 0 && ALLOW_COUNTDOWN==1) {
           segundosJugador[1]--;
         }
         if (segundosJugador[1] == 0) {
