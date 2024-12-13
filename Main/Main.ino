@@ -1,5 +1,3 @@
-#include <SPI.h>
-#include <Wire.h>
 #include <ss_oled.h>
 #include <EEPROM.h>
 
@@ -20,29 +18,29 @@
 #define SEC_PHASE_TRIGGER -1 //10
 
 SSOLED ssoled[2];
+uint8_t ucBackBuffer[1024];
 
 //unsigned long milisegundos;
 unsigned long clock, ultimoclock, millisMax;
 unsigned long segundosJugador[2];
-unsigned long BigClock = 0;
+//unsigned long BigClock = 0;
 unsigned int bonus;
-unsigned int moves[2];
-unsigned int movimientos;  // Contadores de movimientos
-unsigned int player = PAUSE;
-unsigned int dVbat[TAM_MUESTREO_BAT], muestraBat;
+unsigned short moves[2];
+unsigned short player = PAUSE;
+unsigned short dVbat[TAM_MUESTREO_BAT], muestraBat;
 unsigned int gamePhase[2];
 int boton=0;
-bool botonPresionado[2], timeout = false, link = false, displayed = false;
+bool botonPresionado[2],  link = false;
 //temp declarations to be moved somewhere else
-unsigned int phaseTrigger[2];
-unsigned long phaseTime[2];
-unsigned int phaseBonus[2];
+unsigned short phaseTrigger[2];
+unsigned int phaseTime[2];
+unsigned short phaseBonus[2];
 
 
 struct persistente {
   unsigned long tiempo;
-  unsigned long bonus;
-  unsigned int beep;
+  unsigned int bonus;
+  unsigned short beep;
   /*unsigned int phaseTrigger[2];
 unsigned long phaseTime[2];
 unsigned int phaseBonus[2];*/
@@ -51,16 +49,18 @@ unsigned int phaseBonus[2];*/
 persistente persist;
 
 void setup() {
-  int inutil;
-  inutil = oledInit(&ssoled[0], OLED_128x64, -1, 0, 0, 1, A4, A5, -1, 400000L);
-  inutil = oledInit(&ssoled[1], OLED_128x64, -1, 0, 0, 0, A2, A3, -1, 400000L);
+  //uint8_t ucBackBuffer[1024];
+  oledInit(&ssoled[0], OLED_128x64, -1, 0, 0, 1, A4, A5, -1, 400000L);
+  oledInit(&ssoled[1], OLED_128x64, -1, 0, 0, 0, A2, A3, -1, 400000L);
   oledFill(&ssoled[0], 0, 1);
   oledFill(&ssoled[1], 0, 1);
-  oledWriteString(&ssoled[0], 0, 0, 3, (char *)"Self test in progress", FONT_SMALL, 0, 1);
-  oledWriteString(&ssoled[0], 0, 20, 4, (char *)"(Max. 3 seconds)", FONT_SMALL, 0, 1);
+  //oledWriteString(&ssoled[0], 0, 0, 3, (char *)"Self test in progress", FONT_SMALL, 0, 1);
+  //oledWriteString(&ssoled[0], 0, 20, 4, (char *)"(Max. 3 seconds)", FONT_SMALL, 0, 1);
+  dibujaLogo();
   oledWriteString(&ssoled[1], 0, 0, 3, (char *)"Self test in progress", FONT_SMALL, 0, 1);
   oledWriteString(&ssoled[1], 0, 20, 4, (char *)"(Max. 3 seconds)", FONT_SMALL, 0, 1);
-
+  //oledSetBackBuffer(&ssoled[0], NULL);
+  //oledSetBackBuffer(&ssoled[1], NULL);
   for(muestraBat=0;muestraBat<TAM_MUESTREO_BAT;muestraBat++){
     dVbat[muestraBat]=75;
   }
@@ -102,7 +102,18 @@ void setup() {
     delay(25);
     digitalWrite(7, LOW);
   }
+  /*while(1){
+    dibujaBandera(ssoled[1]);
+  }*/
   timeSetting(0);
+}
+
+void dibujaLogo(){
+  oledRectangle(&ssoled[0], 25, 5, 35, 6, 1, 1);
+  oledRectangle(&ssoled[0], 29, 5, 31, 12, 1, 0);
+  oledRectangle(&ssoled[0], 30, 37, 30, 18, 1, 1);
+  oledEllipse(&ssoled[0], 30, 37, 25, 25, 1, 0);
+  oledDumpBuffer(&ssoled[0], ucBackBuffer);
 }
 
 void beep(long time) {
@@ -464,6 +475,16 @@ void ToggleBeep() {
       }
 }
 
+void dibujaBandera(SSOLED &display){
+  oledRectangle(&display, 10, 15, 30, 25, 1, 1);
+  oledEllipse(&display, 16, 15, 4, 2, 0, 1);
+  oledEllipse(&display, 25, 25, 4, 2, 0, 1);
+  oledEllipse(&display, 25, 15, 4, 2, 1, 1);
+  oledEllipse(&display, 16, 25, 4, 2, 1, 1);
+  oledRectangle(&display, 10, 15, 11, 45, 1, 1);
+  //oledDumpBuffer(&display, ucBackBuffer);
+}
+
 int botonPulsado(){  //  Trato de controlar pulsaciones multiples de boton
   int devolver=boton;//  Almacenamos el ultimo boton pulsado. Devolveremos su valor si ya se ha soltado.
   if(boton==0){      //  Si hemos detectado una pulsación solo tmparemos nota de ello en la variable global boton
@@ -622,6 +643,7 @@ void serialSys(){
 void loop() {
   char buf[40];
   clock = millis();
+  //uint8_t ucBackBuffer[1024];
 
   // Paramos el beep tras su timeout
   if (clock > millisMax) {
@@ -656,7 +678,8 @@ void loop() {
           beep(1500);
           digitalWrite(9, HIGH);
           //ToHMS(segundosJugador[1], buf);
-          sprintf(buf, ">0:00.0<");
+          dibujaBandera(ssoled[0]);
+          sprintf(buf, "   0:00  ");
           oledWriteString(&ssoled[0], 0, 0, 3, (char *)buf, FONT_STRETCHED, 0, 1);
         }
         if (segundosJugador[0] == 30 || segundosJugador[0] == 20 || segundosJugador[0] == 10) {
@@ -674,7 +697,8 @@ void loop() {
           beep(1500);
           digitalWrite(10, HIGH);
           //ToHMS(segundosJugador[1], buf);
-          sprintf(buf, ">0:00.0<");
+          sprintf(buf, "   0:00  ");
+          dibujaBandera(ssoled[1]);
           oledWriteString(&ssoled[1], 0, 0, 3, (char *)buf, FONT_STRETCHED, 0, 1);
         }
         if (segundosJugador[1] == 30 || segundosJugador[1] == 20 || segundosJugador[1] == 10) {
@@ -701,169 +725,3 @@ void loop() {
   }
 
 }
-
-
-/*
-void loop() {
-  char buf[40];
-  clock = millis();
-  //milisegundos = clock;
-  if (clock > millisMax) {
-    digitalWrite(7, LOW);
-  }
-  if (Serial.available()) {
-    // unsigned long currentTime = millis();
-    String command = Serial.readStringUntil('\n');  // Read incoming command
-    if (command == "LINK LOGON") {
-      // Send LOGON-CONFIRM back to the Python side
-      Serial.println("LOGON CONFIRM");
-      link = true;
-    }
-    if (command == "DEFAULT") {
-      player = PAUSE;
-      persist.tiempo = 6000;
-      segundosJugador[0] = 6000;
-      segundosJugador[1] = 6000;
-      persist.bonus = 0;
-      persist.beep = 1;
-      EEPROM.put(0, persist);
-    }
-    if (command == "BEEP") {
-      ToggleBeep();
-      EEPROM.put(0, persist);
-    } else if (command == "HELP") {
-      Serial.println("DEFAULT: returns to default values (10+0, beep on)");
-      Serial.println("BEEP: toggles the buzzer (shows on screen status)");
-      Serial.println("HELP: shows this");
-    } if (command == "LINK STOP") {
-      // Send LOGON-CONFIRM back to the Python side
-      link = false;
-    } else {
-      Serial.println("ERROR: command not recognised: " + command);
-    }
-    int player1Time = segundosJugador[0];  // Replace with actual logic
-    int player2Time = segundosJugador[1];
-
-    // Send formatted data: player1_time,player2_time
-  }
-  if (clock > (ultimoclock + 99)) {
-    //Serial.println(millis());
-    if (link == true) {
-      Serial.print(segundosJugador[0]);
-      Serial.print(",");
-      Serial.print(segundosJugador[1]);
-      Serial.print(",");
-      Serial.println(movimientos);
-    }
-    ultimoclock = clock;
-
-    switch (player) {
-      case 0:
-
-        if (segundosJugador[0] > 0) {
-          segundosJugador[0]--;
-        }
-        if (segundosJugador[0] == 0) {
-          player = TIMEOUT;
-          beep(1500);
-          digitalWrite(9, HIGH);
-          //ToHMS(segundosJugador[1], buf);
-          sprintf(buf, ">0:00.0<");
-          oledWriteString(&ssoled[0], 0, 0, 3, (char *)buf, FONT_STRETCHED, 0, 1);
-        }
-        if (segundosJugador[0] == 30 || segundosJugador[0] == 20 || segundosJugador[0] == 10) {
-          beep(100);
-        }
-        refrescaDisplay(&ssoled[player], segundosJugador[player], moves[player]);
-        break;
-
-      case 1:
-        if (segundosJugador[1] > 0) {
-          segundosJugador[1]--;
-        }
-        if (segundosJugador[1] == 0) {
-          player = TIMEOUT;
-          beep(1500);
-          digitalWrite(10, HIGH);
-          //ToHMS(segundosJugador[1], buf);
-          sprintf(buf, ">0:00.0<");
-          oledWriteString(&ssoled[1], 0, 0, 3, (char *)buf, FONT_STRETCHED, 0, 1);
-        }
-        if (segundosJugador[1] == 30 || segundosJugador[1] == 20 || segundosJugador[1] == 10) {
-          beep(100);
-        }
-        refrescaDisplay(&ssoled[player], segundosJugador[player], moves[player]);
-        break;
-
-      case PAUSE:
-        oledWriteString(&ssoled[0], 0, 0, 6, (char *)" ", FONT_STRETCHED, 0, 1);
-        oledWriteString(&ssoled[1], 0, 110, 6, (char *)" ", FONT_STRETCHED, 0, 1);
-        for (int i = 0; i < 2; i++) {
-          refrescaDisplay(&ssoled[i], segundosJugador[i], moves[i]);
-        }
-        break;
-
-      case TIMEOUT:
-        break;
-
-      default:
-        oledWriteString(&ssoled[0], 0, 60, 7, (char *)"ERROR", FONT_NORMAL, 0, 1);
-        Serial.println("Error: estado desconocido");
-    }
-  }
-
-  // Detectar el botón del Jugador 1
-  if ((digitalRead(2) == LOW) && !botonPresionado[0] && (player == 0 || player == PAUSE)) {
-    SerialOvrd();
-    if (player != PAUSE) {
-      segundosJugador[0] += 10 * bonus;  // Agregar bonus al Jugador 2
-      moves[0]++;                        // Incrementar movimientos del Jugador 1
-    }
-    segundosJugador[0] += bonus;  // Agregar bonus al Jugador 1
-    oledWriteString(&ssoled[0], 0, 0, 6, (char *)" ", FONT_STRETCHED, 0, 1);
-    oledWriteString(&ssoled[1], 0, 110, 6, (char *)">", FONT_STRETCHED, 0, 1);
-    botonPresionado[0] = true;
-    //Serial.println("Cambio a Jugador 2");
-    player = 1;  // Cambia al Jugador 2
-  } else {
-    botonPresionado[0] = false;
-  }
-
-  // Detectar el botón del Jugador 2
-  if ((digitalRead(3) == LOW) && !botonPresionado[1] && (player == 1 || player == PAUSE)) {
-    SerialOvrd();
-    if (player != PAUSE) {
-      //segundosJugador[1] += 10 * bonus;
-      moves[1]++;  // Incrementar movimientos del Jugador 1
-    }
-    player = 0;  // Cambia al Jugador 1
-    segundosJugador[1] += bonus;  // Agregar bonus al Jugador 1
-    botonPresionado[1] = true;
-    //Serial.println("Cambio a Jugador 1");
-    oledWriteString(&ssoled[0], 0, 0, 6, (char *)"<", FONT_STRETCHED, 0, 1);
-    oledWriteString(&ssoled[1], 0, 110, 6, (char *)" ", FONT_STRETCHED, 0, 1);
-  } else {
-    botonPresionado[1] = false;
-  }
-
-
-  // Detectar el botón del PAUSE
-  if (digitalRead(5) == LOW && digitalRead(2) == HIGH && digitalRead(3) == HIGH) {
-    player = PAUSE;
-    oledWriteString(&ssoled[0], 0, 0, 6, (char *)" ", FONT_STRETCHED, 0, 1);
-    oledWriteString(&ssoled[1], 0, 110, 6, (char *)" ", FONT_STRETCHED, 0, 1);
-  }
-
-  if (digitalRead(4) == LOW && player == PAUSE && digitalRead(2) == HIGH && digitalRead(6) == HIGH) {
-    timeSetting(1);
-  }
-  if (digitalRead(6) == LOW && player == PAUSE && digitalRead(3) == HIGH && digitalRead(4) == HIGH) {
-    timeSetting(2);
-  }
-  if (digitalRead(6) == LOW && digitalRead(4) == LOW && player == PAUSE){
-    ToggleBeep();
-    delay(150);
-  }
-}
-
-*/
