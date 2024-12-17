@@ -1,6 +1,6 @@
 {
-    "port": "COM5",
-    "board": "arduino:avr:uno",
-    "programmer": "avrisp",
+    "port": "COM7",
+    "board": "arduino:renesas_uno:minima",
+    "programmer": "rfp",
     "sketch": "Main.ino"
 }

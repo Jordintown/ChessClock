@@ -12,11 +12,12 @@
 #define MY_OLED OLED_128x64
 
 uint8_t ucBackBuffer[1024];
+
 SSOLED ssoled[2];
 
 void setup() {
   int inutil;
-  inutil = oledInit(&ssoled[0], OLED_128x64, -1, 0, 0, 1, A4, A5, -1, 400000L);
+  inutil = oledInit(&ssoled[0], OLED_128x64, -1, 0, 0, 1, A5, A4, -1, 400000L);
   inutil = oledInit(&ssoled[1], OLED_128x64, -1, 0, 0, 0, A2, A3, -1, 400000L);
   oledFill(&ssoled[0], 0, 1);
   oledFill(&ssoled[1], 0, 1);
@@ -25,7 +26,7 @@ void setup() {
   oledWriteString(&ssoled[1], 0, 0, 3, (char *)"Self test in progress", FONT_SMALL, 0, 1);
   oledWriteString(&ssoled[1], 0, 20, 4, (char *)"(Max. 3 seconds)", FONT_SMALL, 0, 1);
   oledFill(&ssoled[0], 0, 1);
-  //oledFill(&ssoled[1], 0, 1);
+  oledFill(&ssoled[1], 0, 1);
   oledSetBackBuffer(&ssoled[0], ucBackBuffer);
   oledSetBackBuffer(&ssoled[1], ucBackBuffer);
 }
@@ -38,6 +39,7 @@ void dibujaBandera(SSOLED &display){
   oledEllipse(&display, 16, 25, 4, 2, 1, 1);
   oledRectangle(&display, 10, 15, 11, 45, 1, 1);
   oledDumpBuffer(&display, ucBackBuffer);
+  oledSetBackBuffer(&display, NULL);
 }
 
 void dibujaReloj(SSOLED &display){
@@ -45,14 +47,15 @@ void dibujaReloj(SSOLED &display){
   oledRectangle(&display, 29, 5, 31, 12, 1, 0);
   oledRectangle(&display, 30, 37, 30, 18, 1, 1);
   oledEllipse(&display, 30, 37, 25, 25, 1, 0);
-  oledDumpBuffer(&display, ucBackBuffer);
+  oledDumpBuffer(&display, (ucBackBuffer));
 }
 void dibujaLogo(){
   oledRectangle(&ssoled[0], 25, 5, 35, 6, 1, 1);
   oledRectangle(&ssoled[0], 29, 5, 31, 12, 1, 0);
   oledRectangle(&ssoled[0], 30, 37, 30, 18, 1, 1);
   oledEllipse(&ssoled[0], 30, 37, 25, 25, 1, 0);
-  oledDumpBuffer(&ssoled[0], ucBackBuffer);
+  oledDumpBuffer(&ssoled[0], (ucBackBuffer));
+  oledSetBackBuffer(&ssoled[0], NULL);
 }
 
 void drawRectangleWithHollowCenter(SSOLED &display, int x, int y, int width, int height) {
@@ -66,10 +69,8 @@ void drawRectangleWithHollowCenter(SSOLED &display, int x, int y, int width, int
 }
 
 void loop() {
-  /*
-  dibujaBandera(ssoled[1]);
-  dibujaBandera(ssoled[0]);
-  */
+  //dibujaBandera(ssoled[1]);
+  //dibujaBandera(ssoled[0]);
   
   dibujaLogo();
   //dibujaReloj(ssoled[0]);

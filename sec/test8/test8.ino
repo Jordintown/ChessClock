@@ -1,128 +1,158 @@
-//
-// Small Simple OLED library multi-display demo
-//
-// Demonstrates how to initialize and use multiple displays
-//
 #include <ss_oled.h>
 
-// Use -1 for the Wire library default pins
-// or specify the pin numbers to use with the Wire library or bit banging on any GPIO pins
-// These are reversed because I did straight-through wiring for my SSD1306
-// and it has the 4-pin header as GND,VCC,SCL,SDA, but the GROVE connector is
-// GND,VCC,SDA,SCL
-#define GROVE_SDA_PIN 32
-#define GROVE_SCL_PIN 26
-// Set this to -1 to disable or the GPIO pin number connected to the reset
-// line of your display if it requires an external reset
+// Arduino Pro Mini
+// Pin 8 (0xb0 = PORTB, bit 0)
+// Pin 9 (0xb1 = PORTB, bit 1)
+// UnexpectedMaker TinyPICO
+#define SDA_PIN A4
+#define SCL_PIN A5
+
 #define RESET_PIN -1
-// let ss_oled figure out the display address
-#define OLED_ADDR -1
-// don't rotate the display
-#define FLIP180 0
-// don't invert the display
-#define INVERT 0
-// Bit-Bang the I2C bus
-#define USE_HW_I2C 1
+#define FLIPPED 0
+#define INVERTED 0
+// Use bit banging to get higher speed output
+#define HARDWARE_I2C 0
+#define WIDTH 128
+#define HEIGHT 64
+int rc;
+SSOLED oled;
 
-// Change this if you're using different OLED displays
-#define MY_OLED OLED_128x64
-uint8_t ucBackBuffer[1024];
-
-// The SSOLED structure. Each structure is about 56 bytes
-// There is no limit to the number of simultaneous displays which can be controlled by ss_oled 
-SSOLED ssoled;
+// Use a 1K back buffer to do access more complex features on systems with
+// more RAM available. This can work on AVR, but will use most of the RAM
+#ifndef __AVR__
+static uint8_t ucBuffer[1024];
+#endif // __AVR__
 
 void setup() {
-char *msgs[] = {(char *)"SSD1306 @ 0x3C", (char *)"SSD1306 @ 0x3D",(char *)"SH1106 @ 0x3C",(char *)"SH1106 @ 0x3D"};
-int rc;
-// The I2C SDA/SCL pins set to -1 means to use the default Wire library
-// If pins were specified, they would be bit-banged in software
-// This isn't inferior to hw I2C and in fact allows you to go faster on certain CPUs
-// The reset pin is optional and I've only seen it needed on larger OLEDs (2.4")
-//    that can be configured as either SPI or I2C
-//
-// oledInit(SSOLED *, type, oled_addr, rotate180, invert, bWire, SDA_PIN, SCL_PIN, RESET_PIN, speed)
-
-rc = oledInit(&ssoled, MY_OLED, OLED_ADDR, FLIP180, INVERT, USE_HW_I2C, GROVE_SDA_PIN, GROVE_SCL_PIN, RESET_PIN, 800000L); // use standard I2C bus at 400Khz
+uint8_t uc[8];
+    
+  rc = oledInit(&oled, OLED_128x64, 0x3c, FLIPPED, INVERTED, HARDWARE_I2C, SDA_PIN, SCL_PIN, RESET_PIN, 1000000L);
   if (rc != OLED_NOT_FOUND)
   {
-    oledFill(&ssoled, 0, 1);
-    oledWriteString(&ssoled, 0,0,0,msgs[rc], FONT_NORMAL, 0, 1);
-    delay(2000);
+    #ifndef __AVR__
+    oledSetBackBuffer(&oled, ucBuffer);
+    #endif
+    oledFill(&oled, 0,1);
+    oledSetContrast(&oled, 127);
+    oledWriteString(&oled, 0,0,0,(char *)"**************** ", FONT_8x8, 0, 1);
+    oledWriteString(&oled, 0,4,1,(char *)"BitBank SS_OLED", FONT_8x8, 0, 1);
+    oledWriteString(&oled, 0,8,2,(char *)"running on the", FONT_8x8, 0, 1);
+    oledWriteString(&oled, 0,8,3,(char *)"SSD1306 128x64", FONT_8x8, 0, 1);
+    oledWriteString(&oled, 0,4,4,(char *)"monochrome OLED", FONT_8x8, 0, 1);
+    oledWriteString(&oled, 0,24,5,(char *)"Written By", FONT_8x8, 0, 1);
+    oledWriteString(&oled, 0,24,6,(char *)"Larry Bank", FONT_8x8, 0, 1);
+    oledWriteString(&oled, 0,0,7,(char *)"**************** ", FONT_8x8, 0, 1);
+    delay(4000);
   }
-  else
-  {
-    while (1) {};
-  }
-  oledSetBackBuffer(&ssoled, ucBackBuffer);
-} /* setup() */
-
-#define DRAW_ELLIPSES
-#define DRAW_RECTS
+}
 
 void loop() {
-  int i, x, y, x2, y2, r1, r2;
-  uint8_t ucColor;
+int i, j;
+char szTemp[32];
 
-#ifdef DRAW_ELLIPSES
-  oledFill(&ssoled, 0, 1);
-  oledWriteString(&ssoled, 0, 0, 0, (char *)"Ellipses", FONT_NORMAL, 0, 1);
-  delay(2000);
-  oledFill(&ssoled, 0, 1);
-  for (i=0; i<100; i++)
+  oledFill(&oled, 0,1);
+  oledWriteString(&oled, 0,0,0,(char *)"Now with 5 font sizes", FONT_6x8, 0, 1);
+  oledWriteString(&oled, 0,0,1,(char *)"6x8 8x8 16x16", FONT_8x8, 0, 1);
+  oledWriteString(&oled, 0,0,2,(char *)"16x32 and a new", FONT_8x8, 0, 1);
+  oledWriteString(&oled, 0,0,3,(char *)"Stretched", FONT_12x16, 0, 1);
+  oledWriteString(&oled, 0,0,5,(char *)"from 6x8", FONT_12x16, 0, 1);
+  delay(5000);
+  
+  oledFill(&oled, 0, 1);
+  oledSetTextWrap(&oled, 1);
+  oledWriteString(&oled, 0,-1,-1,(char *)"This is a test of text wrap", FONT_6x8, 0, 1);
+  delay(3000);
+  oledFill(&oled, 0,1);
+//  oledSetTextWrap(0);
+  oledWriteString(&oled, 0,-1,-1,(char *)"This ", FONT_16x16, 0, 1);
+  oledWriteString(&oled, 0,-1,-1,(char *)"is a ", FONT_16x16, 0, 1);
+  oledWriteString(&oled, 0,-1,-1,(char *)"test of text wrap", FONT_16x16, 0, 1);
+  delay(3000);
+  oledFill(&oled, 0,1);
+  oledSetCursor(&oled, 40,4);
+  oledWriteString(&oled, 0,-1,-1,(char *)"Middle", FONT_6x8,0,1);
+  delay(3000);
+  if (rc >= OLED_SH1106_3C)          // We can set pixels on the SH1106 without a back buffer
   {
-    x = random(128);
-    y = random(64);
-    r1 = random(64);
-    r2 = random(32);
-    oledEllipse(&ssoled, x, y, r1, r2, 1, 0);
-    oledDumpBuffer(&ssoled, NULL);    
+    int x, y;
+    for (i=0; i<2500; i++)
+    {
+      x = random(128);
+      y = random(64);
+       oledSetPixel(&oled, x, y, 1, 1);
+    }
+    delay(2000);
   }
-  oledFill(&ssoled, 0, 1);
-  oledWriteString(&ssoled, 0, 0, 0, (char *)"Filled Ellipses", FONT_NORMAL, 0, 1);
-  delay(2000);
-  oledFill(&ssoled, 0, 1);
-  for (i=0; i<100; i++)
-  {
-    x = random(128);
-    y = random(64);
-    r1 = random(64);
-    r2 = random(32);
-    ucColor = random(2);
-    oledEllipse(&ssoled, x, y, r1, r2, ucColor, 1);
-    oledDumpBuffer(&ssoled, NULL);
-  }
-#endif // DRAW_ELLIPSES
+#ifndef __AVR__
 
-#ifdef DRAW_RECTS
-  oledFill(&ssoled, 0, 1);
-  oledWriteString(&ssoled, 0, 0, 0, (char *)"Rectangles", FONT_NORMAL, 0, 1);
-  delay(2000);
-  oledFill(&ssoled, 0, 1);
-  for (i=0; i<100; i++)
-  {
-    x = random(128);
-    y = random(64);
-    x2 = random(128);
-    y2 = random(64);
-    oledRectangle(&ssoled, x, y, x2, y2, 1, 0);
-    oledDumpBuffer(&ssoled, NULL);
+  for (int iRot=ROT_0; iRot <= ROT_270; iRot++) {
+    for (int i=128; i<1280; i+=64) {
+      oledFill(&oled, 0, 0);
+      oledScaledString(&oled, WIDTH/2, HEIGHT/2, (char *)"Hello", FONT_SMALL, 0, i, i, iRot);
+      oledDumpBuffer(&oled, NULL);
+    }
+    for (int i=1280; i>=128; i-=64) {
+      oledFill(&oled, 0, 0);
+      oledScaledString(&oled, WIDTH/2, HEIGHT/2, (char *)"Hello", FONT_SMALL, 0, 1280, i, iRot);
+      oledDumpBuffer(&oled, NULL);
+    }
+    for (int i=1280; i>=128; i-=64) {
+      oledFill(&oled, 0, 0);
+      oledScaledString(&oled, WIDTH/2, HEIGHT/2, (char *)"Hello", FONT_SMALL, 0, i, 128, iRot);
+      oledDumpBuffer(&oled, NULL);
+    }
   }
-  oledFill(&ssoled, 0, 1);
-  oledWriteString(&ssoled, 0, 0, 0, (char *)"Filled Rects", FONT_NORMAL, 0, 1);
   delay(2000);
-  oledFill(&ssoled, 0, 1);
-  for (i=0; i<100; i++)
-  {
-    x = random(128);
-    y = random(64);
-    x2 = random(128);
-    y2 = random(64);
-    ucColor = random(2);
-    oledRectangle(&ssoled, x, y, x2, y2, ucColor, 1);
-    oledDumpBuffer(&ssoled, NULL);
-  }
-#endif // DRAW_RECTS
 
-  delay(4000);
-} /* loop() */
+// Rotated Text
+  oledFill(&oled, 0, 1);
+  oledWriteString(&oled, 0, 0, 0, (char *)"Rotated", FONT_NORMAL, 0, 1);
+  oledWriteString(&oled, 0, 0, 1, (char *)"Text", FONT_NORMAL, 0, 1);
+  delay(2000);
+
+  for (int iRot = ROT_0; iRot <= ROT_270; iRot++) {
+    oledFill(&oled, 0, 1);
+    for (i = 0; i<40; i++) {
+       int x, y;
+       x = random(WIDTH);
+       y = random(HEIGHT);
+       oledScaledString(&oled, x, y, (char *)"Rotated Text", FONT_8x8, 0, 256, 256, iRot);
+       oledDumpBuffer(&oled, NULL);
+    } // for i
+    delay(2000);
+  } // for iRot
+
+  for (i=0; i<8; i++)
+  {
+    sprintf(szTemp, "Line %d", i);
+    oledWriteString(&oled, 0,0,i,szTemp, FONT_8x8, 0, 0);
+    oledWriteString(&oled, 0,64,i,szTemp, FONT_8x8, 0, 0);
+  } // for i
+  j = 0; // missing line
+  while (1)
+  {
+    for (i=0; i<8; i++) // smooth scroll 8 lines
+    {
+//void oledScrollBuffer(int iStartCol, int iEndCol, int iStartRow, int iEndRow, int bUp);
+      oledScrollBuffer(&oled, 0,63,0,7,1);
+      oledScrollBuffer(&oled, 64,127,0,7,0);
+      oledDumpBuffer(&oled, NULL);
+//void oledDrawGFX(uint8_t *pSrc, int iSrcCol, int iSrcRow, int iDestCol, int iDestRow, int iWidth, int iHeight, int iSrcPitch);
+//      oledDrawGFX(NULL, 0, 0, 0, 0, 64, 7, 0); // left half
+//      oledDrawGFX(NULL, 64, 1, 64, 0, 64, 7, 0); // right half 
+      delay(40);
+    }
+    // fill in the missing line which scrolls off
+    sprintf(szTemp, "Line %d", j & 7);
+    oledWriteString(&oled, 0,0,7,szTemp, FONT_NORMAL, 0, 0);
+    sprintf(szTemp, "Line %d", 7-(j & 7));
+    oledWriteString(&oled, 0,64,0,szTemp, FONT_NORMAL, 0, 0);
+    j++;
+  }
+#else
+  for (i=0; i<256; i++)
+  {
+    oledWriteString(&oled, i, 0,0,(char *)"This is a scrolling text demo showing how a long string can be displayed ", FONT_NORMAL, 0, 1);
+  }
+#endif // __AVR__
+} // loop
