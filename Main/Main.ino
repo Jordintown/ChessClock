@@ -482,12 +482,13 @@ void mostrarEstado() {
 
 void refrescaDisplay(SSOLED *pantalla, unsigned long segunds) {
   char buf[20];
+  unsigned short rmk;
     if (player!=TIMEOUT){
       mostrarTiempoRestante(pantalla, segunds);  // Mostrar tiempo restante
     }
     mostrarBonus();                            // Mostrar "Bonus" en la pantalla del Jugador 1
     mostrarEstado();                      // Mostrar movimientos del Jugador 1
-  if (persist.beep == 1 && player==PAUSE && millis()%10==0) {
+  if (persist.beep == 1) {
     oledWriteString(&ssoled[0], 0, 0, 0, "         ", FONT_SMALL, 0, 1);
   }
   if (persist.beep == 0 && player==PAUSE && millis()%10==0) {
@@ -795,13 +796,13 @@ void loop() {
         break;
 
       case PAUSE:
-
         oledWriteString(&ssoled[0], 0, 0, 6, (char *)" ", FONT_STRETCHED, 0, 1);
         oledWriteString(&ssoled[1], 0, 110, 6, (char *)" ", FONT_STRETCHED, 0, 1);
         break;
 
       case TIMEOUT:
-
+        refrescaDisplay(&ssoled[0], segundosJugador[0]);
+        refrescaDisplay(&ssoled[1], segundosJugador[1]);
         oledWriteString(&ssoled[0], 0, 0, 6, (char *)" ", FONT_STRETCHED, 0, 1);
         oledWriteString(&ssoled[1], 0, 110, 6, (char *)" ", FONT_STRETCHED, 0, 1);
         break;
