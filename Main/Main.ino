@@ -5,31 +5,21 @@
 // #  ARDUCHESS PROJECT #
 // ######################
 // https://github.com/Jordintown/ChessClock
+
 #include <ss_oled.h>
 #include <EEPROM.h>
+#include "conversions.h"
+#include "LANG_EN_US.h"
+#include "config.h"
 
 //static code legibility defs
 #define PAUSE 3
 #define TIMEOUT 4
 
-//config vars
-#define TAM_MUESTREO_BAT 15
-#define ALLOW_COUNTDOWN 1
-#define DEC_TRESHOLD 16
-
-#define FIRST_PHASE_TIME 600
-#define FIRST_PHASE_BONUS 60
-#define FIRST_PHASE_TRIGGER -1 //5
-
-#define SEC_PHASE_TIME 1200
-#define SEC_PHASE_BONUS 120
-#define SEC_PHASE_TRIGGER -1 //10
-
 SSOLED ssoled[2];
 
-uint8_t LDUbuffer[1024];
-uint8_t RDUbuffer[1024];
-uint8_t DDUbuffer[1024];
+uint8_t LDUbuffer[1048];
+uint8_t RDUbuffer[2048];
 
 //unsigned long milisegundos;
 unsigned long reloj, ultimoclock, millisMax;
@@ -66,11 +56,12 @@ void setup() {
   oledInit(&ssoled[1], OLED_128x64, -1, 0, 0, 0, A2, A3, -1, 400000L);
   oledFill(&ssoled[0], 0, 1);
   oledFill(&ssoled[1], 0, 1);
-  //oledWriteString(&ssoled[0], 0, 0, 3, (char *)("Self test in progress"), FONT_SMALL, 0, 1);
-  //oledWriteString(&ssoled[0], 0, 20, 4, (char *)("(Max. 3 seconds)"), FONT_SMALL, 0, 1);
   dibujaLogo();
   oledWriteString(&ssoled[1], 0, 0, 3, (char *)("Self test in progress"), FONT_SMALL, 0, 1);
   oledWriteString(&ssoled[1], 0, 20, 4, (char *)("(Max. 3 seconds)"), FONT_SMALL, 0, 1);
+  if (ALLOW_BOOT!=1){
+    error("BOOT ERROR", "The config", "is not valid", " ", "CNF_BOOT_DISBLD", false);
+  }
   for(muestraBat=0;muestraBat<TAM_MUESTREO_BAT;muestraBat++){
     dVbat[muestraBat]=75;
   }
@@ -116,20 +107,74 @@ void setup() {
   timeSetting(0);
 }
 
-/*void dibujaReloj(SSOLED &display){
+void error( char* title, char* l1, char* l2, char* l3, char* code, bool skippable){
+  char buffer[32];
+  oledFill(&ssoled[0], 0, 1);
+  oledFill(&ssoled[1], 0, 1);
+  oledSetBackBuffer(&ssoled[0], LDUbuffer);
+  oledSetBackBuffer(&ssoled[1], RDUbuffer);
+  if (skippable==true){
+    while (digitalRead(5)==HIGH){
+      oledWriteString(&ssoled[0], 0, 7, 1, (char *)title, FONT_NORMAL, 1, 0);
+      oledWriteString(&ssoled[0], 0, 10, 3, (char *)l1, FONT_SMALL, 0, 0);
+      oledWriteString(&ssoled[0], 0, 10, 4, (char *)l2, FONT_SMALL, 0, 0);
+      oledWriteString(&ssoled[0], 0, 10, 5, (char *)l3, FONT_SMALL, 0, 0);
+      oledRectangle(&ssoled[0], 6, 7, 124, 16, 1, 0);
+      oledRectangle(&ssoled[0], 6, 7, 124, 62, 1, 0);
+      oledDumpBuffer(&ssoled[0], (NULL));
+      //
+      oledWriteString(&ssoled[1], 0, 7, 1, (char *)"CLOCK DATA", FONT_NORMAL, 1, 0);
+      sprintf(buffer, "FIRMWARE: v%s", FIRM_VER);
+      oledWriteString(&ssoled[1], 0, 10, 3, (char *)buffer, FONT_SMALL, 0, 0);
+      oledWriteString(&ssoled[1], 0, 10, 4, (char *)"ERROR:", FONT_SMALL, 0, 0);
+      oledWriteString(&ssoled[1], 0, 10, 5, (char *)buffer, FONT_SMALL, 0, 0);
+      oledRectangle(&ssoled[1], 6, 7, 124, 16, 1, 0);
+      oledRectangle(&ssoled[1], 6, 7, 124, 62, 1, 0);
+      oledRectangle(&ssoled[1], 6, 55, 124, 62, 1, 0);
+      oledWriteString(&ssoled[1], 0, 7, 7, (char *)"PAUSE: continue", FONT_NORMAL, 1, 0);
+      oledDumpBuffer(&ssoled[1], (NULL));
+    }
+  } else {
+    while (1){
+      oledWriteString(&ssoled[0], 0, 7, 1, (char *)title, FONT_NORMAL, 1, 0);
+      oledWriteString(&ssoled[0], 0, 10, 3, (char *)l1, FONT_SMALL, 0, 0);
+      oledWriteString(&ssoled[0], 0, 10, 4, (char *)l2, FONT_SMALL, 0, 0);
+      oledWriteString(&ssoled[0], 0, 10, 5, (char *)l3, FONT_SMALL, 0, 0);
+      oledRectangle(&ssoled[0], 6, 7, 124, 16, 1, 0);
+      oledRectangle(&ssoled[0], 6, 7, 124, 62, 1, 0);
+      oledDumpBuffer(&ssoled[0], (NULL));
+      //
+      oledWriteString(&ssoled[1], 0, 7, 1, (char *)"CLOCK DATA", FONT_NORMAL, 1, 0);
+      sprintf(buffer, "FIRMWARE: v%s", FIRM_VER);
+      oledWriteString(&ssoled[1], 0, 10, 3, (char *)buffer, FONT_SMALL, 0, 0);
+      oledWriteString(&ssoled[1], 0, 10, 4, (char *)"ERROR:", FONT_SMALL, 0, 0);
+      oledWriteString(&ssoled[1], 0, 10, 5, (char *)buffer, FONT_SMALL, 0, 0);
+      oledRectangle(&ssoled[1], 6, 7, 124, 16, 1, 0);
+      oledRectangle(&ssoled[1], 6, 7, 124, 62, 1, 0);
+      oledDumpBuffer(&ssoled[1], (NULL));
+    }
+  }
+  oledFill(&ssoled[0], 0, 1);
+  oledFill(&ssoled[1], 0, 1);
+}
+
+void dibujaReloj(SSOLED &display){
   oledRectangle(&display, 25, 5, 35, 6, 1, 1);
   oledRectangle(&display, 29, 5, 31, 12, 1, 0);
   oledRectangle(&display, 30, 37, 30, 18, 1, 1);
   oledEllipse(&display, 30, 37, 25, 25, 1, 0);
-  oledDumpBuffer(&display, (DDUbuffer));
-}*/
+  oledDumpBuffer(&display, (LDUbuffer));
+}
 
 void dibujaLogo(){
+  oledFill(&ssoled[0], 0, 1);
+  oledSetBackBuffer(&ssoled[0], LDUbuffer);
   oledRectangle(&ssoled[0], 25, 5, 35, 6, 1, 1);
   oledRectangle(&ssoled[0], 29, 5, 31, 12, 1, 0);
   oledRectangle(&ssoled[0], 30, 37, 30, 18, 1, 1);
   oledEllipse(&ssoled[0], 30, 37, 25, 25, 1, 0);
-  oledDumpBuffer(&ssoled[0], (LDUbuffer));
+  oledDumpBuffer(&ssoled[0], (NULL));
+  //while (1);
 }
 
 void beep(long time) {
@@ -271,7 +316,7 @@ void timeSetting(int type) {
     moves[1] = 0;
   } else if (type == 2) {
     int mod = 0;
-    int modif[2];
+    int modif[2] = {0, 0};
     String texto;
     player = PAUSE;
     oledFill(&ssoled[0], 0, 1);
@@ -282,19 +327,22 @@ void timeSetting(int type) {
     oledWriteString(&ssoled[0], 0, 0, 7, (char *)("+/-: modify"), FONT_NORMAL, 0, 1);
     oledWriteString(&ssoled[0], 0, 30, 5, (char *)("Player 1"), FONT_SMALL, 0, 1);
     oledWriteString(&ssoled[1], 0, 30, 5, (char *)("Player 2"), FONT_SMALL, 0, 1);
-    texto = String((int)modif[0]);
+
+    texto = String("   " + String(modif[0]) + "   ");
     texto.toCharArray(buf, 15);
     oledWriteString(&ssoled[0], 0, 50, 3, buf, FONT_STRETCHED, 0, 1);
-    texto = String((int)modif[1]);
+
+    texto = String("   " + String(modif[1]) + "   ");
     texto.toCharArray(buf, 15);
-    oledWriteString(&ssoled[1], 0, 50, 3, (char *)buf, FONT_STRETCHED, 0, 1);
+    oledWriteString(&ssoled[1], 0, 50, 3, buf, FONT_STRETCHED, 0, 1);
+
     while (1) {
       delay(75);
       if (digitalRead(4) == LOW) {
         if (mod == 0) {
-          modif[0] +=10;
+          modif[0] += 10;
         } else if (mod == 1) {
-          modif[1] +=10;
+          modif[1] += 10;
         }
       }
       if (digitalRead(5) == LOW) {
@@ -308,29 +356,34 @@ void timeSetting(int type) {
       }
       if (digitalRead(6) == LOW) {
         if (mod == 0) {
-          modif[0] -=10;
+          modif[0] -= 10;
         } else if (mod == 1) {
-          modif[1] -=10;
+          modif[1] -= 10;
         }
       }
-        if (mod==0){
-          texto = String((int)modif[0]);
-          texto.toCharArray(buf, 15);
-          oledWriteString(&ssoled[0], 0, 50, 3, (char *)buf, FONT_STRETCHED, 1, 1);
-          texto = String((int)modif[1]);
-          texto.toCharArray(buf, 15);
-          oledWriteString(&ssoled[1], 0, 50, 3, (char *)buf, FONT_STRETCHED, 0, 1);
-        } if (mod==1){
-          texto = String((int)modif[0]);
-          texto.toCharArray(buf, 15);
-          oledWriteString(&ssoled[0], 0, 50, 3, (char *)buf, FONT_STRETCHED, 0, 1);
-          texto = String((int)modif[1]);
-          texto.toCharArray(buf, 15);
-          oledWriteString(&ssoled[1], 0, 50, 3, (char *)buf, FONT_STRETCHED, 1, 1);
-        }
+
+      if (mod == 0) {
+        texto = String("   " + String(modif[0]) + "    ");
+        texto.toCharArray(buf, 15);
+        oledWriteString(&ssoled[0], 0, 0, 3, buf, FONT_STRETCHED, 1, 1);
+
+        texto = String("   " + String(modif[1]) + "    ");
+        texto.toCharArray(buf, 15);
+        oledWriteString(&ssoled[1], 0, 0, 3, buf, FONT_STRETCHED, 0, 1);
+      }
+      if (mod == 1) {
+        texto = String("   " + String(modif[0]) + "    ");
+        texto.toCharArray(buf, 15);
+        oledWriteString(&ssoled[0], 0, 0, 3, buf, FONT_STRETCHED, 0, 1);
+
+        texto = String("   " + String(modif[1]) + "    ");
+        texto.toCharArray(buf, 15);
+        oledWriteString(&ssoled[1], 0, 0, 3, buf, FONT_STRETCHED, 1, 1);
+      }
     }
-    segundosJugador[0]+=10*modif[0];
-    segundosJugador[1]+=10*modif[1];
+
+    segundosJugador[0] += 10 * modif[0];
+    segundosJugador[1] += 10 * modif[1];
     oledFill(&ssoled[0], 0, 1);
     oledFill(&ssoled[1], 0, 1);
     mod = 0;
@@ -342,33 +395,6 @@ void timeSetting(int type) {
   }
 }
 
-// Función para convertir cualquier variable a string
-String variableToString(int value) {
-  return String(value);
-}
-
-String variableToString(unsigned int value) {
-  return String(value);
-}
-
-String variableToString(long value) {
-  return String(value);
-}
-
-String variableToString(unsigned long value) {
-  return String(value);
-}
-
-// Para otros tipos, puedes agregar más sobrecargas si es necesario
-
-char* intToChar(int num) {
-    // Calcula el espacio necesario (incluye el carácter nulo)
-    char* str = (char*)malloc(12);  // Suficiente para un int de 32 bits (+ signo y null)
-    if (str != NULL) {
-        sprintf(str, "%d", num);  // Convierte el int a char*
-    }
-    return str;
-}
 
 // Función para convertir segundos a hh:mm o mm:ss
 void mostrarTiempoRestante(SSOLED *oled, unsigned long segundosRestantes) {
@@ -394,21 +420,6 @@ void mostrarTiempoRestante(SSOLED *oled, unsigned long segundosRestantes) {
   }
 }
 
-char *ToHMS(long seg, char *buffer) {
-  //char buffer[15];
-  if (seg >= 36000) {  // Si hay más de 1 hora
-    int horas = seg / 36000;
-    int minutos = (seg % 36000) / 600;
-    int segundos = seg % 6;
-    sprintf(buffer, "%2d:%02d:%02d   ", horas, minutos, segundos);  // Mostrar solo horas y minutos
-    return buffer;
-  } else {  // Menos de 1 hora
-    int minutos = seg / 600;
-    int segundos = seg % 60;
-    sprintf(buffer, " %02d:%02d      ", minutos, segundos);  // Mostrar minutos y segundos
-    return buffer;
-  }
-}
 // Función para mostrar "Bonus" en la parte inferior izquierda de la pantalla
 void mostrarBonus() {
   char buf[25];
@@ -439,11 +450,12 @@ void mostrarEstado() {
 
 void refrescaDisplay(SSOLED *pantalla, unsigned long segunds) {
   char buf[20];
-  if (player != TIMEOUT) {
-    mostrarTiempoRestante(pantalla, segunds);  // Mostrar tiempo restante
+  unsigned short rmk;
+    if (player!=TIMEOUT){
+      mostrarTiempoRestante(pantalla, segunds);  // Mostrar tiempo restante
+    }
     mostrarBonus();                            // Mostrar "Bonus" en la pantalla del Jugador 1
     mostrarEstado();                      // Mostrar movimientos del Jugador 1
-  }
   if (persist.beep == 1) {
     oledWriteString(&ssoled[0], 0, 0, 0, "         ", FONT_SMALL, 0, 1);
   }
@@ -470,7 +482,13 @@ void refrescaDisplay(SSOLED *pantalla, unsigned long segunds) {
   String texto = String((int)percent);
   texto = "Bat: " + texto + "%  ";
   texto.toCharArray(buf, 15);
-  oledWriteString(&ssoled[0], 0, 70, 0, buf, FONT_SMALL, 0, 1);
+  if (percent<BAT_WARN_TRESH) rmk =1;
+  else rmk =0;
+  if (percent>0){
+    oledWriteString(&ssoled[0], 0, 70, 0, buf, FONT_SMALL, rmk, 1);
+  } else if (percent==0) {
+    oledWriteString(&ssoled[0], 0, 70, 0, "          ", FONT_SMALL, 0, 1);
+  }
   //Serial.println(percent);
 }
 
@@ -504,25 +522,30 @@ void ToggleBeep() {
       }
 }
 
-/*void dibujaBandera(0){
+void dibujaBandera(){
+  oledSetBackBuffer(&ssoled[0], LDUbuffer);
   oledRectangle(&ssoled[0], 10, 15, 30, 25, 1, 1);
+  oledRectangle(&ssoled[0], 12, 25, 40, 45, 0, 1);
   oledEllipse(&ssoled[0], 16, 15, 4, 2, 0, 1);
   oledEllipse(&ssoled[0], 25, 25, 4, 2, 0, 1);
   oledEllipse(&ssoled[0], 25, 15, 4, 2, 1, 1);
   oledEllipse(&ssoled[0], 16, 25, 4, 2, 1, 1);
   oledRectangle(&ssoled[0], 10, 15, 11, 45, 1, 1);
-  oledDumpBuffer(&ssoled[0], LDUbuffer);
+  oledDumpBuffer(&ssoled[0], NULL);
 }
 
-void dibujaBandera(1){
-  oledRectangle(&ssoled[1], 10, 15, 30, 25, 1, 1);
-  oledEllipse(&ssoled[1], 16, 15, 4, 2, 0, 1);
-  oledEllipse(&ssoled[1], 25, 25, 4, 2, 0, 1);
-  oledEllipse(&ssoled[1], 25, 15, 4, 2, 1, 1);
-  oledEllipse(&ssoled[1], 16, 25, 4, 2, 1, 1);
-  oledRectangle(&ssoled[1], 10, 15, 11, 45, 1, 1);
-  oledDumpBuffer(&ssoled[1], RDUbuffer);
-}*/
+void DibujaBandera(){
+  int ofst=90;
+  oledSetBackBuffer(&ssoled[1], RDUbuffer);
+  oledRectangle(&ssoled[1], 10+ofst, 15, 30+ofst, 25, 1, 1);
+  oledRectangle(&ssoled[1], 12+ofst, 25, 40+ofst, 45, 0, 1);
+  oledEllipse(&ssoled[1], 16+ofst, 15, 4, 2, 0, 1);
+  oledEllipse(&ssoled[1], 25+ofst, 25, 4, 2, 0, 1);
+  oledEllipse(&ssoled[1], 25+ofst, 15, 4, 2, 1, 1);
+  oledEllipse(&ssoled[1], 16+ofst, 25, 4, 2, 1, 1);
+  oledRectangle(&ssoled[1], 10+ofst, 15, 11+ofst, 45, 1, 1);
+  oledDumpBuffer(&ssoled[1], NULL);
+}
 
 int botonPulsado(){  //  Trato de controlar pulsaciones multiples de boton
   int devolver=boton;//  Almacenamos el ultimo boton pulsado. Devolveremos su valor si ya se ha soltado.
@@ -653,9 +676,9 @@ void serialSys(){
     }
     if (command == "DEFAULT") {
       player = PAUSE;
-      persist.tiempo = 6000;
-      segundosJugador[0] = 6000;
-      segundosJugador[1] = 6000;
+      persist.tiempo = DEF_TIME;
+      segundosJugador[0] = DEF_TIME;
+      segundosJugador[1] = DEF_TIME;
       persist.bonus = 0;
       persist.beep = 1;
       EEPROM.put(0, persist);
@@ -684,6 +707,7 @@ void loop() {
   char buf[40];
   reloj = millis();
   Serial.println(millis());
+  CambiaEstado();     //   reacciona a la pulsacion de botones
   // Paramos el beep tras su timeout
   if (reloj > millisMax) {
     digitalWrite(7, LOW);
@@ -697,8 +721,6 @@ void loop() {
     SerialOvrd();
     ultimoclock = reloj;
 
-    CambiaEstado();     //   reacciona a la pulsacion de botones
-
     switch (player) {
       case 0:
         if (segundosJugador[0] > 0 && ALLOW_COUNTDOWN==1) {
@@ -707,11 +729,11 @@ void loop() {
         if (segundosJugador[0] == 0) {
           player = TIMEOUT;
           beep(1500);
-          digitalWrite(9, HIGH);
+          //digitalWrite(9, HIGH);
           //ToHMS(segundosJugador[1], buf);
-          //dibujaBandera(0);
-          sprintf(buf, "   0:00  ");
-          oledWriteString(&ssoled[0], 0, 0, 3, (char *)buf, FONT_STRETCHED, 0, 1);
+          dibujaBandera();
+          sprintf(buf, "0:00  ");
+          oledWriteString(&ssoled[0], 0, 40, 3, (char *)buf, FONT_STRETCHED, 0, 1);
         }
         if (segundosJugador[0] == 30 || segundosJugador[0] == 20 || segundosJugador[0] == 10) {
           beep(100);
@@ -726,11 +748,11 @@ void loop() {
         if (segundosJugador[1] == 0) {
           player = TIMEOUT;
           beep(1500);
-          digitalWrite(10, HIGH);
+          //digitalWrite(10, HIGH);
           //ToHMS(segundosJugador[1], buf);
-          sprintf(buf, "   0:00  ");
-          //dibujaBandera(1);
-          oledWriteString(&ssoled[1], 0, 0, 3, (char *)buf, FONT_STRETCHED, 0, 1);
+          DibujaBandera();
+          sprintf(buf, "0:00");
+          oledWriteString(&ssoled[1], 0, 20, 3, (char *)buf, FONT_STRETCHED, 0, 1);
         }
         if (segundosJugador[1] == 30 || segundosJugador[1] == 20 || segundosJugador[1] == 10) {
           beep(100);
@@ -739,11 +761,17 @@ void loop() {
         break;
 
       case PAUSE:
+        refrescaDisplay(&ssoled[0], segundosJugador[0]);
+        refrescaDisplay(&ssoled[1], segundosJugador[1]);
         oledWriteString(&ssoled[0], 0, 0, 6, (char *)" ", FONT_STRETCHED, 0, 1);
         oledWriteString(&ssoled[1], 0, 110, 6, (char *)" ", FONT_STRETCHED, 0, 1);
         break;
 
       case TIMEOUT:
+        refrescaDisplay(&ssoled[0], segundosJugador[0]);
+        refrescaDisplay(&ssoled[1], segundosJugador[1]);
+        oledWriteString(&ssoled[0], 0, 0, 6, (char *)" ", FONT_STRETCHED, 0, 1);
+        oledWriteString(&ssoled[1], 0, 110, 6, (char *)" ", FONT_STRETCHED, 0, 1);
         break;
 
       default:
