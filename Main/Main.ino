@@ -9,7 +9,6 @@
 #include <ss_oled.h>
 #include <EEPROM.h>
 #include "conversions.h"
-#include "LANG_EN_US.h"
 #include "config.h"
 
 //static code legibility defs
@@ -23,33 +22,34 @@ uint8_t RDUbuffer[2048];
 
 //unsigned long milisegundos;
 unsigned long reloj, ultimoclock, millisMax;
-unsigned long segundosJugador[2];
+unsigned long segundosJugafdor[2];
 //unsigned long BigClock = 0;
 unsigned int bonus;
 unsigned short moves[2];
 unsigned short player = PAUSE;
 unsigned short dVbat[SZ_MUESTREO_BAT], muestraBat;
-unsigned int gamePhase[2];
+//unsigned int gamePhase[2];
 int boton=0;
 bool botonPresionado[2],  link = false;
 //temp declarations to be moved somewhere else
-unsigned short phaseTrigger[2];
+/*unsigned short phaseTrigger[2];
 unsigned int phaseTime[2];
-unsigned short phaseBonus[2];
+unsigned short phaseBonus[2];*/
 
 
 struct persistente {
   unsigned long tiempo;
   unsigned int bonus;
   unsigned short beep;
- int phaseTrigger[2];
+ /*int phaseTrigger[2];
  long phaseTime[2];
- int phaseBonus[2];
+ int phaseBonus[2];*/
 };
 
 persistente persist;
 
 void setup() {
+  digitalWrite(LED_BUILTIN, HIGH);
   oledSetBackBuffer(&ssoled[0], LDUbuffer);
   oledSetBackBuffer(&ssoled[1], RDUbuffer);
   oledInit(&ssoled[0], OLED_128x64, -1, 0, 0, 1, A5, A4, -1, 400000L);
@@ -60,22 +60,23 @@ void setup() {
   oledWriteString(&ssoled[1], 0, 0, 3, (char *)("Self test in progress"), FONT_SMALL, 0, 1);
   oledWriteString(&ssoled[1], 0, 20, 4, (char *)("(Max. 3 seconds)"), FONT_SMALL, 0, 1);
   if (ALLOW_BOOT!=1){
-    error("BOOT ERROR", "The config", "is not valid", " ", "CNF_BOOT_DISBLD", false);
+    error("BOOT ERROR", "The configuration", "data is not valid", " ", "CNF_BOOT_DISBLD", false);
+    //error("DME ChessClock", "An open source", "Arduino Chess Clock", "with great features", "WLCM_MSSG_DSPLY", false);
   }
   for(muestraBat=0;muestraBat<SZ_MUESTREO_BAT;muestraBat++){
-    dVbat[muestraBat]=75;
+    dVbat[muestraBat]=INIT_BAT_dV;
   }
 
   Serial.begin(115200);
 
   EEPROM.get(0, persist);
 
-  phaseTrigger[0]=persist.phaseTrigger[0];
+  /*phaseTrigger[0]=persist.phaseTrigger[0];
   phaseTrigger[1]=persist.phaseTrigger[1];
   phaseTime[0]=persist.phaseTime[0];
   phaseTime[1]=persist.phaseTime[1];
   phaseBonus[0]=persist.phaseBonus[0];
-  phaseBonus[1]=persist.phaseBonus[1];
+  phaseBonus[1]=persist.phaseBonus[1];*/
 
   for (int i = 0; i < 2; i++) {
     segundosJugador[i] = persist.tiempo;
@@ -83,10 +84,11 @@ void setup() {
     moves[i] = 0;
     botonPresionado[i] = 0;
     oledFill(&ssoled[i], 0, 1);
-    gamePhase[i]=1;
+    //gamePhase[i]=1;
   }
   ultimoclock = 0;
-  pinMode(13, OUTPUT);
+  pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(LED_TX, OUTPUT);
   pinMode(12, OUTPUT);
   pinMode(11, OUTPUT);
   pinMode(10, OUTPUT);
@@ -99,7 +101,7 @@ void setup() {
   pinMode(6, INPUT_PULLUP);
   pinMode(A0, INPUT);
 
-  digitalWrite(13, LOW);
+  digitalWrite(LED_BUILTIN, LOW);
   if ((persist.beep) == 1) {
     digitalWrite(7, HIGH);
     delay(25);
@@ -107,6 +109,7 @@ void setup() {
   }
   oledFill(&ssoled[0], 0, 1);
   oledFill(&ssoled[1], 0, 1);
+  digitalWrite(LED_TX, HIGH);
   timeSetting(0);
 }
 
@@ -117,7 +120,7 @@ void error( char* title, char* l1, char* l2, char* l3, char* code, bool skippabl
   oledSetBackBuffer(&ssoled[0], LDUbuffer);
   oledSetBackBuffer(&ssoled[1], RDUbuffer);
   if (skippable==true){
-    while (digitalRead(5)==HIGH){
+    while (digitalRead(5)==LOW){
       oledWriteString(&ssoled[0], 0, 7, 1, (char *)title, FONT_NORMAL, 1, 0);
       oledWriteString(&ssoled[0], 0, 10, 3, (char *)l1, FONT_SMALL, 0, 0);
       oledWriteString(&ssoled[0], 0, 10, 4, (char *)l2, FONT_SMALL, 0, 0);
@@ -129,8 +132,8 @@ void error( char* title, char* l1, char* l2, char* l3, char* code, bool skippabl
       oledWriteString(&ssoled[1], 0, 7, 1, (char *)"CLOCK DATA", FONT_NORMAL, 1, 0);
       sprintf(buffer, "FIRMWARE: v%s", FIRM_VER);
       oledWriteString(&ssoled[1], 0, 10, 3, (char *)buffer, FONT_SMALL, 0, 0);
-      oledWriteString(&ssoled[1], 0, 10, 4, (char *)"ERROR:", FONT_SMALL, 0, 0);
-      oledWriteString(&ssoled[1], 0, 10, 5, (char *)buffer, FONT_SMALL, 0, 0);
+      oledWriteString(&ssoled[1], 0, 10, 4, (char *)"ERROR CODE:", FONT_SMALL, 0, 0);
+      oledWriteString(&ssoled[1], 0, 10, 5, (char *)code, FONT_SMALL, 0, 0);
       oledRectangle(&ssoled[1], 6, 7, 124, 16, 1, 0);
       oledRectangle(&ssoled[1], 6, 7, 124, 62, 1, 0);
       oledRectangle(&ssoled[1], 6, 55, 124, 62, 1, 0);
@@ -150,8 +153,8 @@ void error( char* title, char* l1, char* l2, char* l3, char* code, bool skippabl
       oledWriteString(&ssoled[1], 0, 7, 1, (char *)"CLOCK DATA", FONT_NORMAL, 1, 0);
       sprintf(buffer, "FIRMWARE: v%s", FIRM_VER);
       oledWriteString(&ssoled[1], 0, 10, 3, (char *)buffer, FONT_SMALL, 0, 0);
-      oledWriteString(&ssoled[1], 0, 10, 4, (char *)"ERROR:", FONT_SMALL, 0, 0);
-      oledWriteString(&ssoled[1], 0, 10, 5, (char *)buffer, FONT_SMALL, 0, 0);
+      oledWriteString(&ssoled[1], 0, 10, 4, (char *)"ERROR CODE:", FONT_SMALL, 0, 0);
+      oledWriteString(&ssoled[1], 0, 10, 5, (char *)code, FONT_SMALL, 0, 0);
       oledRectangle(&ssoled[1], 6, 7, 124, 16, 1, 0);
       oledRectangle(&ssoled[1], 6, 7, 124, 62, 1, 0);
       oledDumpBuffer(&ssoled[1], (NULL));
@@ -161,7 +164,7 @@ void error( char* title, char* l1, char* l2, char* l3, char* code, bool skippabl
   oledFill(&ssoled[1], 0, 1);
 }
 
-void procesarEntrada(String entrada) {
+/*void procesarEntrada(String entrada) {
   if (entrada.startsWith("SetTime")) { // Verifica si el comando es SetTime
     entrada.remove(0, 8); // Elimina "SetTime " del principio
     int indices[8]; // Índices para los valores separados por comas
@@ -188,7 +191,7 @@ void procesarEntrada(String entrada) {
     persist.phaseBonus[1] = indices[7];
     EEPROM.put(0, persist);
   }
-}
+}*/
 
 void dibujaReloj(SSOLED &display){
   oledRectangle(&display, 25, 5, 35, 6, 1, 1);
@@ -474,10 +477,10 @@ void mostrarEstado() {
   oledWriteString(&ssoled[1], 0, 0, 6, (char *)"Moves:", FONT_SMALL, 0, 1);
   oledWriteString(&ssoled[1], 0, 0, 7, (char *)variableToString(moves[1]).c_str(), FONT_NORMAL, 0, 1);
   //
-  oledWriteString(&ssoled[0], 0, 53, 6, (char *)"Phase:", FONT_SMALL, 0, 1);
+  /*oledWriteString(&ssoled[0], 0, 53, 6, (char *)"Phase:", FONT_SMALL, 0, 1);
   oledWriteString(&ssoled[0], 0, 53, 7, (char *)variableToString(gamePhase[0]).c_str(), FONT_NORMAL, 0, 1);
   oledWriteString(&ssoled[1], 0, 40, 6, (char *)"Phase:", FONT_SMALL, 0, 1);
-  oledWriteString(&ssoled[1], 0, 40, 7, (char *)variableToString(gamePhase[1]).c_str(), FONT_NORMAL, 0, 1);
+  oledWriteString(&ssoled[1], 0, 40, 7, (char *)variableToString(gamePhase[1]).c_str(), FONT_NORMAL, 0, 1);*/
 }
 
 void refrescaDisplay(SSOLED *pantalla, unsigned long segunds) {
@@ -491,12 +494,14 @@ void refrescaDisplay(SSOLED *pantalla, unsigned long segunds) {
   if (persist.beep == 1) {
     oledWriteString(&ssoled[0], 0, 0, 0, "         ", FONT_SMALL, 0, 1);
   }
-  if (persist.beep == 0 && player==PAUSE && millis()%10==0) {
+  if (persist.beep == 0) {
     oledWriteString(&ssoled[0], 0, 0, 0, "Sound off", FONT_SMALL, 0, 1);
   }
-  if (link == true && millis()%10==0) {
+  if (link == true) {
+    digitalWrite(LED_TX, LOW);
     oledWriteString(&ssoled[1], 0, 60, 0, "  ChessLink", FONT_SMALL, 0, 1);
   } else {
+    digitalWrite(LED_TX, HIGH);
     oledWriteString(&ssoled[1], 0, 60, 0, "           ", FONT_SMALL, 0, 1);
   }
 
@@ -622,7 +627,7 @@ void CambiaEstado(){ // cambia el estado del reloj segun el boton pulsado
           oledWriteString(&ssoled[0], 0, 0, 6, (char *)" ", FONT_STRETCHED, 0, 1);
           oledWriteString(&ssoled[1], 0, 110, 6, (char *)">", FONT_STRETCHED, 0, 1);
           refrescaDisplay(&ssoled[0], segundosJugador[0]);
-          phaseWork(0);
+          //phaseWork(0);
         player=1;
       break;
     }
@@ -644,7 +649,7 @@ void CambiaEstado(){ // cambia el estado del reloj segun el boton pulsado
           oledWriteString(&ssoled[0], 0, 0, 6, (char *)"<", FONT_STRETCHED, 0, 1);
           oledWriteString(&ssoled[1], 0, 110, 6, (char *)" ", FONT_STRETCHED, 0, 1);
           refrescaDisplay(&ssoled[1], segundosJugador[1]);
-          phaseWork(1);
+          //phaseWork(1);
         player=0;
       break;
     }
@@ -684,7 +689,7 @@ void CambiaEstado(){ // cambia el estado del reloj segun el boton pulsado
   }
 }
 
-void phaseWork(unsigned int player){
+/*void phaseWork(unsigned int player){
   if (moves[player]==persist.phaseTrigger[0]){
     segundosJugador[player]+=10*persist.phaseTime[0];
     bonus=persist.phaseBonus[0];
@@ -695,12 +700,12 @@ void phaseWork(unsigned int player){
     gamePhase[1]=3;
   }
 refrescaDisplay(&ssoled[player], segundosJugador[player]);
-}
+}*/
 
 void serialSys(){
       // unsigned long currentTime = millis();
     String command = Serial.readStringUntil('\n');  // Read incoming command
-    procesarEntrada(command);
+    //procesarEntrada(command);
     if (command == "LINK LOGON") {
       // Send LOGON-CONFIRM back to the Python side
       Serial.println("LOGON CONFIRM");
@@ -796,6 +801,8 @@ void loop() {
         break;
 
       case PAUSE:
+        refrescaDisplay(&ssoled[0], segundosJugador[0]);
+        refrescaDisplay(&ssoled[1], segundosJugador[1]);
         oledWriteString(&ssoled[0], 0, 0, 6, (char *)" ", FONT_STRETCHED, 0, 1);
         oledWriteString(&ssoled[1], 0, 110, 6, (char *)" ", FONT_STRETCHED, 0, 1);
         break;
