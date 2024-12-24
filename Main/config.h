@@ -1,7 +1,7 @@
 //config vars
 #define FIRM_VER "1.0.0A"
 #define ALLOW_BOOT 1
-#define SZ_MUESTREO_BAT 25
+#define SZ_MUESTREO_BAT 50
 #define ALLOW_COUNTDOWN 1
 #define DEC_TRESHOLD 16
 #define BAT_WARN_TRESH 20

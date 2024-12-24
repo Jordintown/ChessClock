@@ -17,12 +17,12 @@
 
 SSOLED ssoled[2];
 
-uint8_t LDUbuffer[1048];
-uint8_t RDUbuffer[2048];
+uint8_t LDUbuffer[1024];
+uint8_t RDUbuffer[1024];
 
 //unsigned long milisegundos;
 unsigned long reloj, ultimoclock, millisMax;
-unsigned long segundosJugafdor[2];
+unsigned long segundosJugador[2];
 //unsigned long BigClock = 0;
 unsigned int bonus;
 unsigned short moves[2];
@@ -60,7 +60,7 @@ void setup() {
   oledWriteString(&ssoled[1], 0, 0, 3, (char *)("Self test in progress"), FONT_SMALL, 0, 1);
   oledWriteString(&ssoled[1], 0, 20, 4, (char *)("(Max. 3 seconds)"), FONT_SMALL, 0, 1);
   if (ALLOW_BOOT!=1){
-    error("BOOT ERROR", "The configuration", "data is not valid", " ", "CNF_BOOT_DISBLD", false);
+    error("BOOT ERROR", "The configuration", "data is not valid", " ", "", "CNF_BOOT_DISBLD", false);
     //error("DME ChessClock", "An open source", "Arduino Chess Clock", "with great features", "WLCM_MSSG_DSPLY", false);
   }
   for(muestraBat=0;muestraBat<SZ_MUESTREO_BAT;muestraBat++){
@@ -113,7 +113,7 @@ void setup() {
   timeSetting(0);
 }
 
-void error( char* title, char* l1, char* l2, char* l3, char* code, bool skippable){
+void error( char* title, char* l1, char* l2, char* l3,char* l4, char* code, bool skippable){
   char buffer[32];
   oledFill(&ssoled[0], 0, 1);
   oledFill(&ssoled[1], 0, 1);
@@ -125,6 +125,7 @@ void error( char* title, char* l1, char* l2, char* l3, char* code, bool skippabl
       oledWriteString(&ssoled[0], 0, 10, 3, (char *)l1, FONT_SMALL, 0, 0);
       oledWriteString(&ssoled[0], 0, 10, 4, (char *)l2, FONT_SMALL, 0, 0);
       oledWriteString(&ssoled[0], 0, 10, 5, (char *)l3, FONT_SMALL, 0, 0);
+      oledWriteString(&ssoled[0], 0, 10, 6, (char *)l4, FONT_SMALL, 0, 0);
       oledRectangle(&ssoled[0], 6, 7, 124, 16, 1, 0);
       oledRectangle(&ssoled[0], 6, 7, 124, 62, 1, 0);
       oledDumpBuffer(&ssoled[0], (NULL));
@@ -146,6 +147,7 @@ void error( char* title, char* l1, char* l2, char* l3, char* code, bool skippabl
       oledWriteString(&ssoled[0], 0, 10, 3, (char *)l1, FONT_SMALL, 0, 0);
       oledWriteString(&ssoled[0], 0, 10, 4, (char *)l2, FONT_SMALL, 0, 0);
       oledWriteString(&ssoled[0], 0, 10, 5, (char *)l3, FONT_SMALL, 0, 0);
+      oledWriteString(&ssoled[0], 0, 10, 6, (char *)l4, FONT_SMALL, 0, 0);
       oledRectangle(&ssoled[0], 6, 7, 124, 16, 1, 0);
       oledRectangle(&ssoled[0], 6, 7, 124, 62, 1, 0);
       oledDumpBuffer(&ssoled[0], (NULL));
@@ -489,7 +491,9 @@ void refrescaDisplay(SSOLED *pantalla, unsigned long segunds) {
     if (player!=TIMEOUT){
       mostrarTiempoRestante(pantalla, segunds);  // Mostrar tiempo restante
     }
-    mostrarBonus();                            // Mostrar "Bonus" en la pantalla del Jugador 1
+    if (player==PAUSE || TIMEOUT){
+      mostrarBonus();                            // Mostrar "Bonus" en la pantalla del Jugador 1
+    }
     mostrarEstado();                      // Mostrar movimientos del Jugador 1
   if (persist.beep == 1) {
     oledWriteString(&ssoled[0], 0, 0, 0, "         ", FONT_SMALL, 0, 1);
@@ -621,7 +625,7 @@ void CambiaEstado(){ // cambia el estado del reloj segun el boton pulsado
       break;
       case 0:         // turno de P1
 
-          SerialOvrd();
+          //SerialOvrd();
             segundosJugador[0] += (10 * bonus);  // Agregar bonus al Jugador 1
             moves[0]++;                        // Incrementar movimientos del Jugador 1
           oledWriteString(&ssoled[0], 0, 0, 6, (char *)" ", FONT_STRETCHED, 0, 1);
@@ -635,15 +639,13 @@ void CambiaEstado(){ // cambia el estado del reloj segun el boton pulsado
     case 3:           // Detectado P2
     switch (player){
       case PAUSE:     // estamos en pausa
-
-          SerialOvrd();
           oledWriteString(&ssoled[0], 0, 0, 6, (char *)"<", FONT_STRETCHED, 0, 1);
           oledWriteString(&ssoled[1], 0, 110, 6, (char *)" ", FONT_STRETCHED, 0, 1);
         player=0;
       break;
       case 1:         // turno de P2
 
-          SerialOvrd();
+          //SerialOvrd();
             segundosJugador[1] += (10 * bonus);    // agregar bonus a 2
             moves[1]++;                          // Incrementar movimientos del Jugador 2
           oledWriteString(&ssoled[0], 0, 0, 6, (char *)"<", FONT_STRETCHED, 0, 1);
@@ -731,8 +733,10 @@ void serialSys(){
     } if (command == "LINK STOP") {
       // Send LOGON-CONFIRM back to the Python side
       link = false;
-    } else {
-      Serial.println(command + "received");
+    } if (command == "FETCH") {
+      SerialOvrd();
+    } if (command=="FIRUPDATE"){
+      error("FIRMWARE UPDATE", "Update in progress", "","DO NOT UNPLUG THE", "CLOCK DURING UPDATE", "FMW_UPDTE", false);
     }
     int player1Time = segundosJugador[0];  // Replace with actual logic
     int player2Time = segundosJugador[1];
@@ -755,7 +759,6 @@ void loop() {
 
   if (reloj >= (ultimoclock + 99)) {
     displayBat();
-    SerialOvrd();
     ultimoclock = reloj;
     if (DBG_MILLIS_PASS!=0){
       Serial.println(millis());
@@ -779,6 +782,7 @@ void loop() {
           beep(100);
         }
         refrescaDisplay(&ssoled[0], segundosJugador[0]);
+        SerialOvrd();
         break;
 
       case 1:
@@ -791,13 +795,13 @@ void loop() {
           //digitalWrite(10, HIGH);
           //ToHMS(segundosJugador[1], buf);
           DibujaBandera();
-          sprintf(buf, "0:00");
-          oledWriteString(&ssoled[1], 0, 20, 3, (char *)buf, FONT_STRETCHED, 0, 1);
+          oledWriteString(&ssoled[1], 0, 20, 3, (char *)"0:00", FONT_STRETCHED, 0, 1);
         }
         if (segundosJugador[1] == 30 || segundosJugador[1] == 20 || segundosJugador[1] == 10) {
           beep(100);
         }
         refrescaDisplay(&ssoled[1], segundosJugador[1]);
+        SerialOvrd();
         break;
 
       case PAUSE:
