@@ -1,6 +1,6 @@
 {
-    "port": "COM5",
+    "port": "COM7",
     "board": "arduino:renesas_uno:minima",
     "programmer": "rfp",
-    "sketch": "Main\\Main.ino"
+    "sketch": "Rewritten\\rewritten.ino"
 }

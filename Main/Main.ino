@@ -18,8 +18,8 @@
 
 SSOLED ssoled[2];
 
-uint8_t LDUbuffer[1024];
 uint8_t RDUbuffer[1024];
+uint8_t LDUbuffer[1024];
 
 //unsigned long milisegundos;
 unsigned long reloj, ultimoclock, millisMax;
@@ -53,8 +53,10 @@ void setup() {
   digitalWrite(LED_BUILTIN, HIGH);
   oledSetBackBuffer(&ssoled[0], LDUbuffer);
   oledSetBackBuffer(&ssoled[1], RDUbuffer);
-  oledInit(&ssoled[0], OLED_128x64, -1, 0, 0, 1, A5, A4, -1, 400000L);
   oledInit(&ssoled[1], OLED_128x64, -1, 0, 0, 0, A2, A3, -1, 400000L);
+  oledInit(&ssoled[0], OLED_128x64, -1, 0, 0, 0, A4, A5, -1, 400000L);
+  //oledInit(&ssoled[0], OLED_128x64, -1, 0, 0, 1, A5, A4, -1, 400000L);
+  //oledInit(&ssoled[1], OLED_128x64, -1, 0, 0, 0, A2, A3, -1, 400000L);
   oledFill(&ssoled[0], 0, 1);
   oledFill(&ssoled[1], 0, 1);
   dibujaLogo();
@@ -510,7 +512,6 @@ void refrescaDisplay(SSOLED *pantalla, unsigned long segunds) {
     oledWriteString(&ssoled[1], 0, 60, 0, "           ", FONT_SMALL, 0, 1);
   }
 
-  muestreoBat();
   //      if ((2*(analogRead(0)*(5.0/1024.0))) < 5.2){
   //  float volts = ((analogRead(0) + 80) / 102.);
   //  float percent = (volts - 6.6) * 62.5;
@@ -520,6 +521,7 @@ void refrescaDisplay(SSOLED *pantalla, unsigned long segunds) {
 void displayBat(){
   char buf[15];
   unsigned short rmk;
+  muestreoBat();
   float percent=consultaBatPercent();
   String texto = String((int)percent);
   texto = "Bat: " + texto + "%  ";
@@ -738,6 +740,10 @@ void serialSys(){
       SerialOvrd();
     } if (command=="FIRUPDATE"){
       error("FIRMWARE UPDATE", "Update in progress", "","DO NOT UNPLUG THE", "CLOCK DURING UPDATE", "FMW_UPDTE", false);
+    } if (command=="VOLT"){
+      if (DBG_VOLT_PASS!=0){
+        Serial.println(consultaBatV());
+      }
     }
     int player1Time = segundosJugador[0];  // Replace with actual logic
     int player2Time = segundosJugador[1];
@@ -747,27 +753,23 @@ void serialSys(){
 
 void loop() {
   char buf[40];
-  reloj = millis();
   CambiaEstado();     //   reacciona a la pulsacion de botones
-  // Paramos el beep tras su timeout
-  if (reloj > millisMax) {
-    digitalWrite(7, LOW);
-  }
 
   if (Serial.available()) {
     serialSys();
   }
 
+  reloj = millis();
   if (reloj >= (ultimoclock + 99)) {
-    displayBat();
     ultimoclock = reloj;
+    displayBat();
     if (DBG_MILLIS_PASS!=0){
       Serial.println(millis());
     }
 
     switch (player) {
       case 0:
-        if (segundosJugador[0] > 0 && ALLOW_COUNTDOWN==1) {
+        if ((segundosJugador[0] > 0) && (ALLOW_COUNTDOWN==1)) {
           segundosJugador[0]--;
         }
         if (segundosJugador[0] == 0) {
@@ -787,7 +789,7 @@ void loop() {
         break;
 
       case 1:
-        if (segundosJugador[1] > 0 && ALLOW_COUNTDOWN==1) {
+        if ((segundosJugador[1] > 0) && (ALLOW_COUNTDOWN==1)) {
           segundosJugador[1]--;
         }
         if (segundosJugador[1] == 0) {
@@ -823,6 +825,10 @@ void loop() {
         oledWriteString(&ssoled[0], 0, 60, 7, (char *)"ERROR", FONT_NORMAL, 0, 1);
         Serial.println("Error: estado desconocido");
     }
+  }
+  // Paramos el beep tras su timeout
+  if (reloj > millisMax) {
+    digitalWrite(7, LOW);
   }
 
 }
