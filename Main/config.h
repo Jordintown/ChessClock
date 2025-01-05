@@ -3,14 +3,14 @@
 #define ALLOW_BOOT 1
 //
 #define ALLOW_COUNTDOWN 1
-#define DEC_TRESHOLD 16
+#define DEC_TRESHOLD 1
 //
 #define SZ_MUESTREO_BAT 50
 #define BAT_WARN_TRESH 20
 #define INIT_BAT_dV 50
 //
-#define DBG_VOLT_PASS 1
-#define DBG_MILLIS_PASS 1 //¡¡¡¡¡¡¡DO NOT USE!!!!!!!!!! affects performance badly
+#define DBG_VOLT_PASS 0
+#define DBG_MILLIS_PASS 0 //¡¡¡¡¡¡¡DO NOT USE!!!!!!!!!! affects performance badly
 //
 #define DEF_TIME 6000
 #define DEF_BONUS 0
