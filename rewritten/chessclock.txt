@@ -1,0 +1,52 @@
+
+
+#define PULSADO_P1    0b00000001
+#define PULSADO_P2    0b00000010
+#define PULSADO_MAS   0b00000100
+#define PULSADO_PAUSA 0b00001000
+#define PULSADO_MENOS 0b00010000
+
+unsigned short botonPulsado(){
+  unsigned short devolver=0b00000000;
+	for(int i=6;i>=2;i--){
+	  devolver=devolver*=2;    // anyado un cero a la derecha
+	  if(digitalRead(i)==LOW){
+		devolver++;            // pongo a 1 el bit derecho
+	  }
+	}
+  return devolver;
+}
+
+if((b & PULSADO_MAS)&&(b & PULSADO_MENOS))
+void beep(long time) {
+  if ((persist.beep) == 1) {
+    millisMax = millis() + time;
+    digitalWrite(7, HIGH);
+  }
+}
+
+
+void muestreoBat(){
+  if(muestraBat>=SZ_MUESTREO_BAT){
+    muestraBat=0;
+  }
+  dVbat[muestraBat++]=(int)((analogRead(0) + 80.) / 10.2);
+}
+
+float consultaBatV(){
+  unsigned long acumulador=0;
+  for(int i=0;i<SZ_MUESTREO_BAT;i++){
+    acumulador+=dVbat[i];
+  }
+ // Serial.println(((float)(acumulador/TAM_MUESTREO_BAT))/10.0);
+  return ((float)(acumulador/SZ_MUESTREO_BAT))/10.0;
+}
+
+float consultaBatPercent(){
+  float resultat=(consultaBatV() - 6.6) * 62.5;
+  if (resultat < 0.) { resultat = 0.; }
+  if (resultat >= 100.) { resultat = 100.; }
+  return resultat;
+  //(volts - 6.6) * 62.5
+}
+
