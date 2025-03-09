@@ -36,13 +36,13 @@
 class clase_pantalla{
   private:
   SSOLED ssoled;
-  uint8_t DUbuffer[1024];
+//  uint8_t DUbuffer[1024];
 
   public:
   clase_pantalla(int sda, int scl){
     oledSetTextWrap(&ssoled, 1);
     oledInit(&ssoled, OLED_128x64, -1, 0, 0, 0, sda, scl, -1, 400000L);
-    oledSetBackBuffer(&ssoled, DUbuffer);
+//    oledSetBackBuffer(&ssoled, DUbuffer);
   }
 
 // este metodo sirve para borrar la pantalla
@@ -64,6 +64,12 @@ class clase_pantalla{
     char buffer[tambuf];
     s.toCharArray(buffer, tambuf);
     oledWriteString(&ssoled, 0, x, y, buffer, tam, inv, 1);
+  }
+
+// publicamos el metodo que permite imprimir rectangulos
+
+  void rectangulo(int x1, int y1, int x2, int y2, int color, int relleno){
+    oledRectangle(&ssoled, x1, y1, x2, y2, color, relleno);
   }
 
 // Metodo especifico para visualizar el tiempo en el centro de la pantalla
@@ -194,6 +200,14 @@ public:
   void imprime(int p, int x, int y, int tam, int inv, String s){
     if(valida(p)){
       pant[p]->imprime(x, y, tam, inv, s);
+    }
+  }
+
+// para imprimir cualquier rectangulo en cualquier posicion
+
+  void rectangulo(int p, int x1, int y1, int x2, int y2, int color, int relleno){
+    if(valida(p)){
+      pant[p]->rectangulo(x1, y1, x2, y2, color, relleno);
     }
   }
 
