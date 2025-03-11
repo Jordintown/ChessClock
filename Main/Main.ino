@@ -4,22 +4,56 @@
 // ######################
 // https://github.com/Jordintown/ChessClock
 
-#include <EEPROM.h>
 
 #include "chessclock-kernel.h"
 
+struct volatil {
+  long t0;
+  long t1;
+  int bonus;
+};
 
+clase_setup *eeprom;  //  puntero a la configuracion
 clase_hardware *hardware;  //  puntero al hadrware
 clase_tiempo *tiempo;      //  puntero al reloj
+volatil config;
+
 
 void setup(){
   Serial.begin(115200);
   hardware=new clase_hardware();     // instanciamos el control de hardware en memoria dinamica
-  tiempo=new clase_tiempo(hardware); // instanciamos el RTC en memoria dinamica
-  hardware->refrescaPantallas(tiempo->consultaTiempo(0),tiempo->consultaTiempo(1));
-//  hardware->imprime(1,0,0,FONT_SMALL,0,String("pause"));
+  eeprom=new clase_setup();  // instanciamos el acceso a EEPROM en memoria dinamica
+  if(hardware->botonPulsado()==(PULSADO_MAS|PULSADO_MENOS)){ // inicializacion de la EEPROM al estado de fabrica
+    eeprom->setTiempo(600000);
+    eeprom->setBonus(0);
+    eeprom->commit();
+  }
+  tiempo=new clase_tiempo(hardware,eeprom->getTiempo(),eeprom->getBonus()); // instanciamos el RTC en memoria dinamica
+  config.t0=tiempo->consultaTiempo(0);
+  config.t1=tiempo->consultaTiempo(1);
+  config.bonus=tiempo->consultaBonus();
+  hardware->refrescaPantallas(config.t0,config.t1);
   hardware->beep(10);
 }
+
+
+
+//  **********
+
+
+
+void set(void){
+  hardware->borra(0);
+  hardware->imprime(0, 2, 2, FONT_LARGE, 0, String("setup"));
+  hardware->imprimetiempo(1, config.bonus);
+  while(!hardware->botonPulsado());
+  tiempo->set(config.t0,config.t1,config.bonus);
+}
+
+
+
+//  **********
+
 
 
 void loop(){
@@ -36,7 +70,7 @@ switch(tiempo->activo()){
 
     if(pulsado==(PULSADO_MAS|PULSADO_MENOS)){
       while(hardware->botonPulsado()); // se mantiene en el bucle mientras haya algun boton pulsado
-      tiempo->set(600000,600000,0);
+      set();
       hardware->refrescaPantallas(tiempo->consultaTiempo(0),tiempo->consultaTiempo(1));
     }
   
@@ -75,7 +109,7 @@ switch(tiempo->activo()){
     case (PULSADO_MAS|PULSADO_MENOS):
       while(hardware->botonPulsado()); // se mantiene en el bucle mientras haya algun boton pulsado
       if(tiempo->activo()==2){         // solo entraremos en setup si estamos en pausa
-        tiempo->set(5400000,5400000,30000);
+        set();
         hardware->refrescaPantallas(tiempo->consultaTiempo(0),tiempo->consultaTiempo(1));
       }
     break;

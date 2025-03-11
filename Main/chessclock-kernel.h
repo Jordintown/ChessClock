@@ -1,5 +1,5 @@
 #include <ss_oled.h>
-
+#include <EEPROM.h>
 
 // desde aquí el metodo que detecta la pulsacion de los botones y la definicion de las mascaras de bits.
 //  Por el momento no es Orientada a Objetos
@@ -211,6 +211,14 @@ public:
     }
   }
 
+// a veces hay que borrar una pantalla
+
+  void borra(int p){
+    if(valida(p)){
+      pant[p]->borra();
+    }
+  }
+
 // para refrescar manualmente el tiempo mostrado en una pantalla
 //  esto se usa como minimo al cambiar de jugador, para visualizar
 //  el incremento aplicado al cambiar el turno
@@ -298,10 +306,18 @@ class clase_tiempo{
 
   public:
   
-// al constructor se le pasa el puntero a un objeto de la clase hardwarel, previamente instanciado
+// al constructor se le pasa el puntero a un objeto de la clase hardware, previamente instanciado
 //  esta referencia es muy util porque asi el RTC refresca las pantallas
 //  sin tener que controlar explicitamente la visualizacion del tiempo
-//  se activan los relojes a 10 minutos sin incremento, solo para asegurarnos de tener valores en rango.
+//  se activan los relojes al valor que haya devuelto setup.
+
+  clase_tiempo(clase_hardware *h, long tiempo, int bonus){
+    hard=h;
+    set(tiempo,tiempo,bonus);
+  }
+
+//  Constructor que activa los relojes a 10 minutos sin incremento, solo para asegurarnos de tener valores en rango.
+//  Constructor util pare restableccer al estado de fabrica.
 
   clase_tiempo(clase_hardware *h){
     hard=h;
@@ -363,5 +379,49 @@ class clase_tiempo{
     }
     return(devolver);
   }
+
+  long consultaBonus(void){
+    return(incremento);
+  }
+
+};
+
+
+// setup nos permite usar la EEPROM de arduino para tener ciertos datos persistentes
+
+class clase_setup{
+
+struct persistente {
+  long tiempo;
+  int bonus;
+};
+
+persistente eeprom;
+
+public:
+
+clase_setup(){
+  EEPROM.get(0, eeprom);
+}
+
+void commit(void){
+  EEPROM.put(0, eeprom);
+}
+
+long getTiempo(void){
+  return eeprom.tiempo;
+}
+
+void setTiempo(long t){
+  eeprom.tiempo=t;
+}
+
+int getBonus(void){
+  return eeprom.bonus;
+}
+
+int setBonus(int b){
+  eeprom.bonus=b;
+}
 
 };
