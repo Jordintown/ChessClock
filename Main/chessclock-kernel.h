@@ -252,6 +252,10 @@ public:
 // inicia el zumbador y define el instante en que dejará de sonar
 
   void beep(unsigned long duracion){
+    if(!duracion){
+      digitalWrite(7,LOW);
+      return;
+    }
     stopBeep=millis()+duracion;
     digitalWrite(7,HIGH);
   }
@@ -389,12 +393,12 @@ class clase_tiempo{
 
 // setup nos permite usar la EEPROM de arduino para tener ciertos datos persistentes
 
-class clase_setup{
-
 struct persistente {
   long tiempo;
-  int bonus;
+  long bonus;
 };
+
+class clase_setup{
 
 persistente eeprom;
 
@@ -413,15 +417,25 @@ long getTiempo(void){
 }
 
 void setTiempo(long t){
-  eeprom.tiempo=t;
+  if(t>0){
+    t=t-(t%1000);
+    eeprom.tiempo=t;
+  }else{
+    eeprom.tiempo=0;
+  }
 }
 
 int getBonus(void){
   return eeprom.bonus;
 }
 
-int setBonus(int b){
-  eeprom.bonus=b;
+void setBonus(int b){
+  if(b>0){
+    b=b-(b%1000);
+    eeprom.bonus=b;
+  }else{
+    eeprom.bonus=0;
+  }
 }
 
 };
