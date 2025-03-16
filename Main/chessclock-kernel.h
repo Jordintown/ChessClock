@@ -6,9 +6,9 @@
 
 #define PULSADO_P2    0b00000001
 #define PULSADO_P1    0b00000010
-#define PULSADO_MAS   0b00000100
+#define PULSADO_MENOS 0b00000100
 #define PULSADO_PAUSA 0b00001000
-#define PULSADO_MENOS 0b00010000
+#define PULSADO_MAS   0b00010000
 
 
 // constantes para el muestro de bateria

@@ -59,6 +59,7 @@ int navegaMenu(char *texto[],long *menu[],int menutam){
   int boton;
   unsigned long pulsando;
   int cursor=0;
+  muestraMenu(cursor,texto,menu,menutam);
   do{
     boton=hardware->botonPulsado();
     switch(boton){
@@ -79,12 +80,12 @@ int navegaMenu(char *texto[],long *menu[],int menutam){
       case PULSADO_MAS:
         pulsando=millis()+1000;
         *menu[cursor]=*menu[cursor]+1000;
-        muestraMenu(cursor,texto,menu,menutam);
+        hardware->imprimetiempo(1, *menu[cursor]);
         while(hardware->botonPulsado()){
           if(pulsando<millis()){
             pulsando=millis()+200;
             *menu[cursor]=*menu[cursor]+60000;
-            muestraMenu(cursor,texto,menu,menutam);
+            hardware->imprimetiempo(1, *menu[cursor]);
           }
         }
       break;
@@ -92,18 +93,18 @@ int navegaMenu(char *texto[],long *menu[],int menutam){
         pulsando=millis()+1000;
         *menu[cursor]=*menu[cursor]-1000;
         if(*menu[cursor]<0) *menu[cursor]=0;
-        muestraMenu(cursor,texto,menu,menutam);
+        hardware->imprimetiempo(1, *menu[cursor]);
         while(hardware->botonPulsado()){
           if(pulsando<millis()){
             pulsando=millis()+200;
             *menu[cursor]=*menu[cursor]-60000;
             if(*menu[cursor]<0) *menu[cursor]=0;
-            muestraMenu(cursor,texto,menu,menutam);
+            hardware->imprimetiempo(1, *menu[cursor]);
           }
         }
       break;
-      default:
-        muestraMenu(cursor,texto,menu,menutam);
+//      default:
+//        muestraMenu(cursor,texto,menu,menutam);
     }
   }while(boton!=PULSADO_PAUSA);
   hardware->borra(0);
