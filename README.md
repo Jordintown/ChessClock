@@ -3,3 +3,5 @@ This is Work In Progress so almost all versions are garbage
 This is my first "serious" project on Arduino, so if u find something weird or improvable pls speak up
 [the code is uncommented, at least for now]
 Under GNU GPL3.0
+**NOTICE**
+This project is no longer being actively maintained. despite this, inquiries of any kind are still accepted, including issues, pull requests and alike.
